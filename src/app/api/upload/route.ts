@@ -1,59 +1,60 @@
-import { NextApiRequest, NextApiResponse } from "next";
-import formidable from "formidable";
-import fs from "fs/promises";
-import { extractTextFromPDF } from "../../utils/pdfParser";
-import {
-  initializePinecone,
-  generateEmbeddings,
-  storeVectorsInPinecone,
-} from "../../utils/vectorUtils";
+import { createSignedURL } from "@/service/s3Service";
+import { NextResponse } from "next/server";
+import { PrismaClient } from "@prisma/client";
+import { v4 as uuidv4 } from "uuid";
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+const prisma = new PrismaClient();
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ message: "Method not allowed." });
-  }
-
+export async function POST(req: Request) {
   try {
-    const form = formidable({});
+    const { fileName, fileType, slug } = await req.json();
 
-    const [fields, files] = await form.parse(req);
-    const file = files.pdfFile?.[0];
-
-    if (!file) {
-      return res.status(400).json({ message: "No file uploaded." });
+    if (!fileName) {
+      return NextResponse.json(
+        { message: "File name is required." },
+        { status: 400 }
+      );
     }
 
-    const fileBuffer = await fs.readFile(file.filepath);
-
-    const text = await extractTextFromPDF(fileBuffer);
-
-    const chunkSize = 1000;
-    const overlap = 200;
-    const chunks: string[] = [];
-
-    for (let i = 0; i < text.length; i += chunkSize - overlap) {
-      chunks.push(text.slice(i, i + chunkSize));
+    if (!fileType) {
+      return NextResponse.json(
+        { message: "File type is required." },
+        { status: 400 }
+      );
     }
 
-    const embeddings = await generateEmbeddings(chunks);
+    const objectKey = `${uuidv4()}-${fileName}`;
 
-    const index = await initializePinecone();
-    await storeVectorsInPinecone(index, embeddings, chunks);
+    await prisma.user.upsert({
+      where: { email: "vaibhavkambar@gmail.com" },
+      update: {
+        documents: {
+          create: {
+            objectKey,
+            slug: slug,
+            fileName: fileName,
+          },
+        },
+      },
+      create: {
+        email: "vaibhavkambar@gmail.com",
+        name: "Vaibhav",
+        documents: {
+          create: {
+            objectKey,
+            slug: slug,
+            fileName: fileName,
+          },
+        },
+      },
+    });
 
-    await fs.unlink(file.filepath);
+    const signedUrl = await createSignedURL(objectKey);
 
-    res.status(200).json({ message: "PDF processed successfully." });
+    return NextResponse.json({ signedUrl: signedUrl }, { status: 200 });
   } catch (error) {
-    console.error("Error processing PDF:", error);
-    res.status(500).json({ message: "Internal server error." });
+    if (error instanceof Error) {
+      console.log("Error: ", error.stack);
+    }
   }
 }
