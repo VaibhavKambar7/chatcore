@@ -17,3 +17,95 @@ body {
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+::-webkit-scrollbar {
+  width: 0.833vw;
+  height: 2vh;
+}
+
+::-webkit-scrollbar-thumb {
+  opacity: 0.15;
+  background: #20202c;
+  background-clip: content-box;
+  border: 0.188vw solid transparent;
+  border-radius: 8vw;
+  box-shadow: none;
+  min-height: 1.5vh;
+  min-width: 1.25vw;
+}
+
+::-webkit-scrollbar-thumb:hover,
+::-webkit-scrollbar-thumb:active {
+  background: #262634;
+  border: 0.25vw solid transparent;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  width: 1vw;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+  border: none;
+}
+
+::-webkit-scrollbar-track:vertical:hover {
+  border-left: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+::-webkit-scrollbar-track:horizontal:hover {
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+select::-webkit-scrollbar-thumb {
+  border: 0.208vw solid #1d1d27;
+}
+
+select::-webkit-scrollbar-track {
+  background: #e8e8e8;
+}
+
+select::-webkit-scrollbar-track:vertical,
+select::-webkit-scrollbar-track:horizontal {
+  border-top: none;
+  border-left: none;
+}
+
+.scrollable-element {
+  scrollbar-width: thin;
+  scrollbar-color: #1d1d27 transparent;
+}
+
+.scrollable-element::-webkit-scrollbar {
+  display: none;
+}
+
+@-moz-document url-prefix() {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #1d1d27 transparent;
+  }
+}
+
+@supports (-moz-appearance: none) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #1d1d27 transparent;
+    cursor: pointer;
+  }
+}
+
+@keyframes fast-spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

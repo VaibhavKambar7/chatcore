@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import axios from "axios";
 import { PiSpinnerBold } from "react-icons/pi";
@@ -12,6 +12,7 @@ const Chat = () => {
   const [messages, setMessages] = useState<string[]>([
     "I have understood your PDF and can answer questions. Ask me anything!",
   ]);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const handlePdf = async () => {
     setLoading(true);
@@ -27,6 +28,12 @@ const Chat = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   const handleSend = async () => {
     setQuery("");
@@ -58,7 +65,10 @@ const Chat = () => {
               {error}
             </div>
           )}
-          <div className="h-[88vh] w-full border-2 border-amber-50 overflow-y-auto">
+          <div
+            className="h-[88vh] w-full border-2 border-amber-50 overflow-y-auto scrollbar-hide"
+            ref={scrollRef}
+          >
             <div className="p-4 flex flex-col gap-4">
               {messages.map((message, index) => (
                 <div
