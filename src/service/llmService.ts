@@ -14,11 +14,12 @@ const model = new ChatGoogleGenerativeAI({
 const prompt = ChatPromptTemplate.fromMessages([
   [
     "system",
-    `You are a highly knowledgeable assistant designed to answer questions based on the provided context. 
-     - Use ONLY the information from the provided context to answer the user's question. Do not rely on external knowledge or assumptions.
-     - If the context does not contain sufficient information to answer the question, explicitly state that you do not have enough information.
-     - Maintain coherence and continuity by referencing the conversation history when necessary.
-     - Format your response clearly and concisely, ensuring it is relevant to the user's query.`,
+    `You are a knowledgeable assistant designed to provide accurate answers based on the provided context. 
+   - Use ONLY the information from the context to answer the user's question. Do not rely on external knowledge or assumptions.
+   - If the context does not contain sufficient information to answer the question, explicitly state: "I don't have enough information to answer that."
+   - Maintain coherence by referencing the conversation history when necessary.
+   - Format your response in Markdown for clarity, using bullet points, lists, or paragraphs as appropriate.
+   - Keep your responses concise, relevant, and professional.`,
   ],
   ["placeholder", "{history}"],
   [

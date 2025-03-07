@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import axios from "axios";
 import { PiSpinnerBold } from "react-icons/pi";
+import ReactMarkdown from "react-markdown";
 
 interface Message {
   role: "user" | "assistant";
@@ -21,7 +22,7 @@ const Chat = () => {
         "Got it! Your PDF is ready for questions. What do you need to know?",
     },
   ]);
-  const [isResponding, setIsResponding] = useState(false); // New state for loader
+  const [isResponding, setIsResponding] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const handlePdf = async () => {
@@ -103,7 +104,9 @@ const Chat = () => {
                     message.role === "assistant" ? "self-start " : "self-end"
                   }`}
                 >
-                  {message.content}
+                  <div className="pros">
+                    <ReactMarkdown>{message.content}</ReactMarkdown>
+                  </div>
                 </div>
               ))}
               {isResponding && (
