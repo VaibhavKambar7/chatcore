@@ -1,9 +1,10 @@
+import { generateLLMResponse } from "@/service/llmService";
 import { queryDB } from "@/service/queryService";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
   try {
-    const { query } = await req.json();
+    const { query, history } = await req.json();
 
     if (!query) {
       return NextResponse.json(
@@ -12,37 +13,12 @@ export async function POST(req: Request) {
       );
     }
 
-    // const document = await prisma.document.findFirst({
-    //   where: {
-    //     User: {
-    //       email: "vaibhavkambar@gmail.com",
-    //     },
-    //   },
-    //   select: {
-    //     objectKey: true,
-    //     fileName: true,
-    //   },
-    // });
+    const context = await queryDB(query);
 
-    // if (!document) {
-    //   return NextResponse.json(
-    //     { message: "Document not found." },
-    //     { status: 404 }
-    //   );
-    // }
-
-    // const { objectKey, fileName } = document;
-
-    // console.log(fileName);
-
-    // const fileObject = await getFileFromS3(objectKey);
-
-    // console.log(fileObject);
-
-    const response = await queryDB(query);
+    const llmResponse = await generateLLMResponse(query, context, history);
 
     return NextResponse.json({
-      response: response,
+      response: llmResponse,
       status: 200,
     });
   } catch (error) {

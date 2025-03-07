@@ -1,20 +1,23 @@
 import { pipeline } from "@xenova/transformers";
-import { generateLLMResponse } from "./llmService";
 import { index } from "./uploadService";
 
 async function embedQuery(query: string): Promise<number[]> {
-  const embeddingPipeline = await pipeline(
-    "feature-extraction",
-    "Xenova/all-mpnet-base-v2"
-  );
-  const output = await embeddingPipeline(query, {
-    pooling: "mean",
-    normalize: true,
-  });
-  return Array.from(output.data);
+  try {
+    const embeddingPipeline = await pipeline(
+      "feature-extraction",
+      "Xenova/all-mpnet-base-v2"
+    );
+    const output = await embeddingPipeline(query, {
+      pooling: "mean",
+      normalize: true,
+    });
+    return Array.from(output.data) as number[];
+  } catch (error) {
+    throw new Error(`Failed to generate embedding: ${error}`);
+  }
 }
 
-export const queryDB = async (query: string) => {
+export const queryDB = async (query: string): Promise<string> => {
   try {
     const queryEmbedding = await embedQuery(query);
     const response = await index.namespace("ns1").query({
@@ -25,14 +28,12 @@ export const queryDB = async (query: string) => {
     });
 
     if (response.matches && response.matches.length > 0) {
-      const context = response.matches
+      return response.matches
         .map((match) => match?.metadata?.text)
+        .filter(Boolean)
         .join("\n\n");
-      const llmResponse = await generateLLMResponse(query, context);
-      return llmResponse;
-    } else {
-      return "No matching results found.";
     }
+    return "No matching results found.";
   } catch (error) {
     console.error("Error querying database:", error);
     return "An error occurred during the query.";

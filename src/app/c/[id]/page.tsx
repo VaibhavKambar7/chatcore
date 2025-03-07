@@ -4,14 +4,24 @@ import { useParams } from "next/navigation";
 import axios from "axios";
 import { PiSpinnerBold } from "react-icons/pi";
 
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+}
+
 const Chat = () => {
   const params = useParams();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState<string>("");
-  const [messages, setMessages] = useState<string[]>([
-    "I have understood your PDF and can answer questions. Ask me anything!",
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      role: "assistant",
+      content:
+        "Got it! Your PDF is ready for questions. What do you need to know?",
+    },
   ]);
+  const [isResponding, setIsResponding] = useState(false); // New state for loader
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const handlePdf = async () => {
@@ -36,11 +46,27 @@ const Chat = () => {
   }, [messages]);
 
   const handleSend = async () => {
+    const userMessage: Message = { role: "user", content: query };
     setQuery("");
-    setMessages((prevMessages) => [...prevMessages, query]);
-    const response = await axios.post("/api/query", { query });
-    setMessages((prevMessages) => [...prevMessages, response.data.response]);
-    console.log(response);
+    setMessages((prevMessages) => [...prevMessages, userMessage]);
+    setIsResponding(true);
+
+    try {
+      const response = await axios.post("/api/query", {
+        query,
+        history: messages,
+      });
+      const assistantMessage: Message = {
+        role: "assistant",
+        content: response.data.response,
+      };
+      setMessages((prevMessages) => [...prevMessages, assistantMessage]);
+    } catch (err) {
+      console.error("Error fetching response:", err);
+      setError((err as Error).message);
+    } finally {
+      setIsResponding(false);
+    }
   };
 
   useEffect(() => {
@@ -74,12 +100,18 @@ const Chat = () => {
                 <div
                   key={index}
                   className={`max-w-[70%] p-3 inline-block bg-black text-grey-100 border-1 border-gray-500 ${
-                    index % 2 === 0 ? "self-start " : "self-end"
+                    message.role === "assistant" ? "self-start " : "self-end"
                   }`}
                 >
-                  {message}
+                  {message.content}
                 </div>
               ))}
+              {isResponding && (
+                <div className="self-start max-w-[70%] p-3 flex flex-row bg-black border-1 border-gray-500">
+                  <PiSpinnerBold className="animate-spin text-xl inline-block text-gray-500 mr-2" />
+                  <div className="text-gray-500">Thinking...</div>
+                </div>
+              )}
             </div>
           </div>
           <div className="flex flex-row w-full">
@@ -92,6 +124,7 @@ const Chat = () => {
                   handleSend();
                 }
               }}
+              disabled={isResponding}
               className="p-2 border-2 border-amber-50 h-[8vh] flex-grow focus:outline-none"
               placeholder="Ask anything about your PDF.."
             />
