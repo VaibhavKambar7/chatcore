@@ -1,5 +1,6 @@
 import { extractTextFromPDF } from "@/service/pdfService";
 import { getFileFromS3 } from "@/service/s3Service";
+import { upsertData } from "@/service/uploadService";
 import { PrismaClient } from "@prisma/client";
 import { NextResponse } from "next/server";
 
@@ -29,10 +30,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { objectKey, fileName } = document;
-    console.log(objectKey, fileName);
-
-    const pdfBuffer = await getFileFromS3(objectKey);
+    const pdfBuffer = await getFileFromS3(document.objectKey);
 
     if (!pdfBuffer || !pdfBuffer) {
       console.log("Failed to retrieve file from S3");
@@ -42,9 +40,14 @@ export async function POST(req: Request) {
       );
     }
 
-    const extractedText = await extractTextFromPDF(pdfBuffer);
+    const embeddedChunks = await extractTextFromPDF(pdfBuffer);
 
-    return NextResponse.json(extractedText);
+    await upsertData(embeddedChunks);
+
+    return NextResponse.json(
+      { message: "Document processed successfully." },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error in API route:", error);
     return NextResponse.json(

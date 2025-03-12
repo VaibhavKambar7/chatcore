@@ -3,7 +3,6 @@ import { Document } from "@langchain/core/documents";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import { pipeline } from "@xenova/transformers";
 import * as dotenv from "dotenv";
-import { upsertData } from "./uploadService";
 
 dotenv.config();
 
@@ -94,9 +93,7 @@ export const extractTextFromPDF = async (pdfBuffer: Uint8Array) => {
 
     const embeddedChunks = await embedChunks(chunkOutputs);
 
-    await upsertData(embeddedChunks);
-
-    return cleanedOutput;
+    return embeddedChunks;
   } catch (error) {
     console.error("Error extracting text from PDF:", error);
     throw new Error("Failed to process the PDF file.");

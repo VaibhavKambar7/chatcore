@@ -15,28 +15,58 @@ const Chat = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState<string>("");
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: "assistant",
-      content:
-        "Got it! Your PDF is ready for questions. What do you need to know?",
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [isResponding, setIsResponding] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const fetchChats = async () => {
+      setLoading(true);
+      try {
+        const response = await axios.post("/api/getChats", {
+          id: params.id,
+        });
+
+        const chats = response?.data?.response?.chatHistory;
+
+        if (chats) {
+          setMessages(chats);
+        } else {
+          setMessages([
+            {
+              role: "assistant",
+              content:
+                "Got it! Your PDF is ready for questions. What do you need to know?",
+            },
+          ]);
+          await handlePdf();
+        }
+      } catch (error) {
+        console.error("Error fetching chats:", error);
+        setMessages([
+          {
+            role: "assistant",
+            content: "Error loading chat history. Please try again.",
+          },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchChats();
+  }, []);
+
   const handlePdf = async () => {
-    setLoading(true);
     setError("");
     try {
-      console.log("Fetching PDF with ID:", params.id);
-      const result = await axios.post("/api/getFile", { id: params.id });
+      const result = await axios.post("/api/processDocument", {
+        id: params.id,
+      });
       console.log("API response:", result);
     } catch (err) {
       console.error("Error fetching document:", err);
       setError((err as Error).message);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -56,6 +86,7 @@ const Chat = () => {
       const response = await axios.post("/api/query", {
         query,
         history: messages,
+        documentId: params.id,
       });
       const assistantMessage: Message = {
         role: "assistant",
@@ -69,15 +100,6 @@ const Chat = () => {
       setIsResponding(false);
     }
   };
-
-  useEffect(() => {
-    if (params.id) {
-      handlePdf();
-    } else {
-      setLoading(false);
-      setError("No document ID provided");
-    }
-  }, [params.id]);
 
   return (
     <div className="container mx-auto p-4">
