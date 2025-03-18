@@ -23,6 +23,7 @@
     "dotenv": "^16.4.7",
     "formidable": "^3.5.2",
     "langchain": "^0.3.19",
+    "llamaindex": "^0.9.11",
     "next": "15.2.1",
     "openai": "^4.77.0",
     "pdf-parse": "^1.1.1",

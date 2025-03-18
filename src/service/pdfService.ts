@@ -1,60 +1,109 @@
-import pdf from "pdf-parse";
-import { Document } from "@langchain/core/documents";
+import { LlamaParseReader } from "llamaindex";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import { pipeline } from "@xenova/transformers";
 import * as dotenv from "dotenv";
+import fs from "fs";
+import path from "path";
 
 dotenv.config();
+
+const LLAMA_API_KEY = process.env.LLAMA_CLOUD_API_KEY || "";
 
 export type ChunkType = {
   id: string;
   text: string;
   metadata: {
-    totalPages: number;
-    chunkIndex: number;
+    totalPages?: number;
+    chunkIndex: string;
+    sectionTitle?: string;
+    subsectionIndex?: number;
   };
   embedding?: number[];
 };
 
-export const cleanData = (data: string): string => {
-  let cleaned = data.replace(/\n{3,}/g, "\n\n");
-  cleaned = cleaned.replace(/\s+/g, " ");
-  cleaned = cleaned.replace(/[^ -~\n]/g, "");
-  cleaned = cleaned.replace(/Page \d+/g, "");
-  cleaned = cleaned.trim();
-  return cleaned;
+export const extractTextFromPDF = async (pdfBuffer: Buffer) => {
+  try {
+    const tempDir = path.join(process.cwd(), "temp");
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir);
+    }
+
+    const tempFilePath = path.join(tempDir, `temp-${Date.now()}.pdf`);
+    fs.writeFileSync(tempFilePath, pdfBuffer);
+
+    const reader = new LlamaParseReader({
+      resultType: "markdown",
+      apiKey: LLAMA_API_KEY,
+    });
+
+    const documents = await reader.loadData(tempFilePath);
+
+    let extractedText = "";
+    for (const doc of documents) {
+      extractedText += doc.text;
+    }
+
+    fs.unlinkSync(tempFilePath);
+
+    return { text: extractedText, totalPages: documents.length };
+  } catch (error) {
+    console.error("Error extracting text from PDF with LlamaParse:", error);
+    throw new Error("Failed to process the PDF file.");
+  }
 };
 
 export const chunkText = async (
   text: string,
-  totalPages: number,
-  chunkSize: number = 1000,
-  chunkOverlap: number = 200
+  totalPages: number
 ): Promise<ChunkType[]> => {
-  const doc = new Document({
-    pageContent: text,
-    metadata: {
-      totalPages,
-    },
-  });
+  const sections = text.split(/(?=\n#+\s+)/).filter((s) => s.trim());
+
+  const chunks: ChunkType[] = [];
+  const maxChunkSize = 500;
+  const chunkOverlap = 200;
 
   const splitter = new RecursiveCharacterTextSplitter({
-    chunkSize,
-    chunkOverlap,
+    chunkSize: maxChunkSize,
+    chunkOverlap: chunkOverlap,
+    separators: ["\n\n", "\n", ". ", " ", ""],
   });
 
-  const chunks = await splitter.splitDocuments([doc]);
+  for (const [sectionIndex, section] of sections.entries()) {
+    const lines = section.trim().split("\n");
+    const titleMatch = lines[0].match(/^#+\s+(.+)$/);
+    const sectionTitle = titleMatch
+      ? titleMatch[1].trim()
+      : `Section ${sectionIndex + 1}`;
+    const content = lines.slice(1).join("\n").trim();
 
-  const chunkOutputs: ChunkType[] = chunks.map((chunk, index) => ({
-    id: `chunk-${index}`,
-    text: chunk.pageContent,
-    metadata: {
-      totalPages: chunk.metadata.totalPages,
-      chunkIndex: index,
-    },
-  }));
+    if (content.length <= maxChunkSize) {
+      chunks.push({
+        id: `chunk-${sectionIndex}-0`,
+        text: content,
+        metadata: {
+          totalPages,
+          chunkIndex: `${sectionIndex}-0`,
+          sectionTitle,
+        },
+      });
+    } else {
+      const subChunks = await splitter.createDocuments([content]);
+      subChunks.forEach((subChunk, subIdx) => {
+        chunks.push({
+          id: `chunk-${sectionIndex}-${subIdx}`,
+          text: subChunk.pageContent,
+          metadata: {
+            totalPages,
+            chunkIndex: `${sectionIndex}-${subIdx}`,
+            sectionTitle,
+            subsectionIndex: subIdx,
+          },
+        });
+      });
+    }
+  }
 
-  return chunkOutputs;
+  return chunks;
 };
 
 export const embedChunks = async (chunkOutputs: ChunkType[]) => {
@@ -62,40 +111,19 @@ export const embedChunks = async (chunkOutputs: ChunkType[]) => {
     "feature-extraction",
     "Xenova/all-mpnet-base-v2"
   );
-  const embeddedChunks: ChunkType[] = [];
 
-  for (const chunk of chunkOutputs) {
-    const output = await embeddingPipeline(chunk.text, {
-      pooling: "mean",
-      normalize: true,
-    });
-
-    const embeddingArray = Array.from(output.data);
-
-    embeddedChunks.push({
-      id: chunk.id,
-      text: chunk.text,
-      metadata: chunk.metadata,
-      embedding: embeddingArray,
-    });
-  }
-
-  return embeddedChunks;
-};
-
-export const extractTextFromPDF = async (pdfBuffer: Uint8Array) => {
-  try {
-    const data = await pdf(Buffer.from(pdfBuffer));
-
-    const cleanedOutput = cleanData(data.text);
-
-    const chunkOutputs = await chunkText(cleanedOutput, data.numpages);
-
-    const embeddedChunks = await embedChunks(chunkOutputs);
-
-    return embeddedChunks;
-  } catch (error) {
-    console.error("Error extracting text from PDF:", error);
-    throw new Error("Failed to process the PDF file.");
-  }
+  return await Promise.all(
+    chunkOutputs.map(async (chunk) => {
+      const output = await embeddingPipeline(chunk.text, {
+        pooling: "mean",
+        normalize: true,
+      });
+      return {
+        id: chunk.id,
+        text: chunk.text,
+        metadata: chunk.metadata,
+        embedding: Array.from(output.data),
+      };
+    })
+  );
 };

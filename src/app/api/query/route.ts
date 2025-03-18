@@ -16,7 +16,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const context = await queryDB(query);
+    const context = await queryDB(query, documentId);
 
     const llmResponse = await generateLLMResponse(query, context, history);
 

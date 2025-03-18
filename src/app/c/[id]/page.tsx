@@ -29,7 +29,7 @@ const Chat = () => {
 
         const chats = response?.data?.response?.chatHistory;
 
-        if (chats) {
+        if (chats[0]) {
           setMessages(chats);
         } else {
           setMessages([

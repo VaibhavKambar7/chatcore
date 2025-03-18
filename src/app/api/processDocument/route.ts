@@ -1,4 +1,8 @@
-import { extractTextFromPDF } from "@/service/pdfService";
+import {
+  extractTextFromPDF,
+  chunkText,
+  embedChunks,
+} from "@/service/pdfService";
 import { getFileFromS3 } from "@/service/s3Service";
 import { upsertData } from "@/service/uploadService";
 import { PrismaClient } from "@prisma/client";
@@ -32,17 +36,11 @@ export async function POST(req: Request) {
 
     const pdfBuffer = await getFileFromS3(document.objectKey);
 
-    if (!pdfBuffer || !pdfBuffer) {
-      console.log("Failed to retrieve file from S3");
-      return NextResponse.json(
-        { message: "Failed to retrieve file from S3." },
-        { status: 500 }
-      );
-    }
+    const { text, totalPages } = await extractTextFromPDF(pdfBuffer);
+    const chunkOutputs = await chunkText(text, totalPages);
+    const embeddedChunks = await embedChunks(chunkOutputs);
 
-    const embeddedChunks = await extractTextFromPDF(pdfBuffer);
-
-    await upsertData(embeddedChunks);
+    await upsertData(embeddedChunks, id);
 
     return NextResponse.json(
       { message: "Document processed successfully." },
