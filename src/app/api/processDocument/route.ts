@@ -5,10 +5,8 @@ import {
 } from "@/service/pdfService";
 import { getFileFromS3 } from "@/service/s3Service";
 import { upsertData } from "@/service/uploadService";
-import { PrismaClient } from "@prisma/client";
 import { NextResponse } from "next/server";
-
-const prisma = new PrismaClient();
+import prisma from "@/lib/prisma";
 
 export async function POST(req: Request) {
   try {

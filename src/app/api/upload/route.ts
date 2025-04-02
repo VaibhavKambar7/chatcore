@@ -1,9 +1,7 @@
 import { createSignedURL } from "@/service/s3Service";
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { v4 as uuidv4 } from "uuid";
-
-const prisma = new PrismaClient();
+import prisma from "@/lib/prisma";
 
 export async function POST(req: Request) {
   try {

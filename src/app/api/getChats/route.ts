@@ -1,35 +1,36 @@
-import { PrismaClient } from "@prisma/client";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
 
-const prisma = new PrismaClient();
-
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const { id } = await req.json();
+    const { email } = await req.json();
 
-    if (!id) {
-      return NextResponse.json({ message: "ID is required" }, { status: 400 });
-    }
-
-    const chatHistory = await prisma.document.findUnique({
-      where: { slug: id },
-    });
-
-    if (!chatHistory) {
+    if (!email) {
       return NextResponse.json(
-        { message: "Document not found" },
-        { status: 404 }
+        { error: "Email is required" },
+        { status: 400 }
       );
     }
 
-    return NextResponse.json({
-      response: chatHistory,
-      status: 200,
+    const chats = await prisma.user.findFirst({
+      where: {
+        email: email,
+      },
+      include: {
+        documents: {
+          select: {
+            slug: true,
+            fileName: true,
+          },
+        },
+      },
     });
+
+    return NextResponse.json(chats?.documents || []);
   } catch (error) {
-    console.error("Error fetching chat history:", error);
+    console.error("Error fetching chats:", error);
     return NextResponse.json(
-      { message: "Internal server error" },
+      { error: "Failed to fetch chats" },
       { status: 500 }
     );
   }

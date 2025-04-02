@@ -23,7 +23,7 @@ const Chat = () => {
     const fetchChatsAndPdf = async () => {
       setLoading(true);
       try {
-        const chatResponse = await axios.post("/api/getChats", {
+        const chatResponse = await axios.post("/api/getConversation", {
           id: params.id,
         });
         const chats = chatResponse?.data?.response?.chatHistory;
