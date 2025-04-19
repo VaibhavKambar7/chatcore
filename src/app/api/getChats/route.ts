@@ -3,30 +3,48 @@ import prisma from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {
-    const { email } = await req.json();
+    const { email, page = 1, limit = 10 } = await req.json();
 
     if (!email) {
-      return NextResponse.json(
-        { error: "Email is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
-    const chats = await prisma.user.findFirst({
-      where: {
-        email: email,
-      },
-      include: {
-        documents: {
-          select: {
-            slug: true,
-            fileName: true,
-          },
-        },
-      },
+    const skip = (page - 1) * limit;
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
     });
 
-    return NextResponse.json(chats?.documents || []);
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const totalCount = await prisma.document.count({
+      where: { userId: user.id },
+    });
+
+    const documents = await prisma.document.findMany({
+      where: { userId: user.id },
+      select: {
+        slug: true,
+        fileName: true,
+        updatedAt: true,
+      },
+      orderBy: { updatedAt: "desc" },
+      skip,
+      take: parseInt(limit.toString()),
+    });
+
+    return NextResponse.json({
+      documents,
+      pagination: {
+        total: totalCount,
+        page: parseInt(page.toString()),
+        limit: parseInt(limit.toString()),
+        hasMore: skip + parseInt(limit.toString()) < totalCount,
+      },
+    });
   } catch (error) {
     console.error("Error fetching chats:", error);
     return NextResponse.json(
