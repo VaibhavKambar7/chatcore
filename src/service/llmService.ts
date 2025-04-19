@@ -33,11 +33,11 @@ const prompt = ChatPromptTemplate.fromMessages([
 export const generateLLMResponse = async (
   question: string,
   context: string,
-  history: Array<{ role: "user" | "assistant"; content: string }> = []
+  history: Array<{ role: "user" | "assistant"; content: string }> = [],
 ) => {
   try {
     const formattedHistory: BaseMessage[] = history.map((msg) =>
-      msg.role === "user" ? new HumanMessage(msg) : new AIMessage(msg)
+      msg.role === "user" ? new HumanMessage(msg) : new AIMessage(msg),
     );
 
     const chain = prompt.pipe(model);

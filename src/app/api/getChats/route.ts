@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     console.error("Error fetching chats:", error);
     return NextResponse.json(
       { error: "Failed to fetch chats" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

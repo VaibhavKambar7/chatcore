@@ -33,14 +33,14 @@ export async function POST(req: Request) {
     } catch (error: any) {
       console.error(
         "Error fetching PDF from S3:",
-        JSON.stringify(error, null, 2)
+        JSON.stringify(error, null, 2),
       );
       return new Response(
         JSON.stringify({
           error: error.message || "Failed to fetch PDF from S3",
           code: error.code,
         }),
-        { status: 500 }
+        { status: 500 },
       );
     }
   } catch (error: any) {
@@ -49,7 +49,7 @@ export async function POST(req: Request) {
       JSON.stringify({
         error: error.message || "Failed to process request",
       }),
-      { status: 400 }
+      { status: 400 },
     );
   }
 }

@@ -26,7 +26,7 @@ export const index = pc.index("rag");
 export const upsertData = async (embeddedChunks: ChunkType[], slug: string) => {
   if (!Array.isArray(embeddedChunks) || embeddedChunks.length === 0) {
     throw new Error(
-      "No chunks to upsert. Embedded chunks array is empty or invalid."
+      "No chunks to upsert. Embedded chunks array is empty or invalid.",
     );
   }
 
@@ -56,7 +56,7 @@ export const upsertData = async (embeddedChunks: ChunkType[], slug: string) => {
               `Attempt ${attempt} failed for batch ${
                 Math.floor(i / batchSize) + 1
               }:`,
-              error
+              error,
             );
             if (attempt === retries) {
               throw error;

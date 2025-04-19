@@ -63,7 +63,7 @@ export function FileUpload({ setPdfUrl }: FileUploadProps) {
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       const signedUrl = response.data.signedUrl;
@@ -83,7 +83,7 @@ export function FileUpload({ setPdfUrl }: FileUploadProps) {
       console.error("Upload error:", error);
       if (axios.isAxiosError(error)) {
         toast.error(
-          `Upload failed: ${error.response?.data?.message || error.message}`
+          `Upload failed: ${error.response?.data?.message || error.message}`,
         );
       } else {
         toast.error("Upload failed. Check console for details.");

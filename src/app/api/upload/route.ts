@@ -10,14 +10,14 @@ export async function POST(req: Request) {
     if (!fileName) {
       return NextResponse.json(
         { message: "File name is required." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (!fileType) {
       return NextResponse.json(
         { message: "File type is required." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 

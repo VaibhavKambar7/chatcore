@@ -10,7 +10,7 @@ export async function POST(req: Request) {
     if (!query) {
       return NextResponse.json(
         { message: "Query is required." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
     console.log("Error", error);
     return NextResponse.json(
       { message: "Internal server error." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

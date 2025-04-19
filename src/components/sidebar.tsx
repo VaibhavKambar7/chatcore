@@ -63,7 +63,7 @@ export default function Sidebar({
               page: 1,
               limit: 10,
               hasMore: false,
-            }
+            },
           );
           return true;
         }
@@ -83,13 +83,13 @@ export default function Sidebar({
             email: EMAIL,
             chats: chatsData,
             pagination: paginationData,
-          })
+          }),
         );
       } catch (error) {
         console.error("Error caching chats:", error);
       }
     },
-    []
+    [],
   );
 
   const fetchChats = useCallback(
@@ -116,7 +116,7 @@ export default function Sidebar({
         setPagination(newPagination);
         cacheChats(
           page === 1 ? documents : [...chats, ...documents],
-          newPagination
+          newPagination,
         );
       } catch (error) {
         setError("Failed to load chats. Please try again.");
@@ -125,7 +125,7 @@ export default function Sidebar({
         else setLoadingMore(false);
       }
     },
-    [pagination.limit, chats, cacheChats]
+    [pagination.limit, chats, cacheChats],
   );
 
   useEffect(() => {

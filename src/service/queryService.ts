@@ -5,7 +5,7 @@ async function embedQuery(query: string): Promise<number[]> {
   try {
     const embeddingPipeline = await pipeline(
       "feature-extraction",
-      "Xenova/all-mpnet-base-v2"
+      "Xenova/all-mpnet-base-v2",
     );
     const output = await embeddingPipeline(query, {
       pooling: "mean",
@@ -21,7 +21,7 @@ async function embedQuery(query: string): Promise<number[]> {
 export const queryDB = async (
   query: string,
   slug: string,
-  sectionTitle?: string
+  sectionTitle?: string,
 ): Promise<string> => {
   try {
     const queryEmbedding = await embedQuery(query);

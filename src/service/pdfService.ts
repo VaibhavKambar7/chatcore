@@ -54,7 +54,7 @@ export const extractTextFromPDF = async (pdfBuffer: Buffer) => {
 
 export const chunkText = async (
   text: string,
-  totalPages: number
+  totalPages: number,
 ): Promise<ChunkType[]> => {
   const sections = text.split(/(?=\n#+\s+)/).filter((s) => s.trim());
 
@@ -109,7 +109,7 @@ export const chunkText = async (
 export const embedChunks = async (chunkOutputs: ChunkType[]) => {
   const embeddingPipeline = await pipeline(
     "feature-extraction",
-    "Xenova/all-mpnet-base-v2"
+    "Xenova/all-mpnet-base-v2",
   );
 
   return await Promise.all(
@@ -124,6 +124,6 @@ export const embedChunks = async (chunkOutputs: ChunkType[]) => {
         metadata: chunk.metadata,
         embedding: Array.from(output.data),
       };
-    })
+    }),
   );
 };

@@ -28,7 +28,7 @@ export async function POST(req: Request) {
       console.log("Document not found for ID:", id);
       return NextResponse.json(
         { message: "Document not found." },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -42,13 +42,13 @@ export async function POST(req: Request) {
 
     return NextResponse.json(
       { message: "Document processed successfully." },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Error in API route:", error);
     return NextResponse.json(
       { message: "Internal server error.", error: String(error) },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

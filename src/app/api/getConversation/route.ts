@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     if (!chatHistory) {
       return NextResponse.json(
         { message: "Document not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     console.error("Error fetching chat history:", error);
     return NextResponse.json(
       { message: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

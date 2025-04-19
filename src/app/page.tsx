@@ -11,9 +11,14 @@ export default function Home() {
 
   return (
     <div className="flex h-screen">
-      {!isSidebarOpen && <div className="w-14 bg-gray-100">
-        <GoSidebarExpand className="text-xl mt-5 ml-4" onClick={() => setIsSidebarOpen(true)} />
-      </div>}
+      {!isSidebarOpen && (
+        <div className="w-14 bg-gray-100">
+          <GoSidebarExpand
+            className="text-xl mt-5 ml-4"
+            onClick={() => setIsSidebarOpen(true)}
+          />
+        </div>
+      )}
       {isSidebarOpen && <Sidebar setIsSidebarOpen={setIsSidebarOpen} />}
       <div className="flex-1 flex flex-col items-center justify-center p-8 bg-white">
         <h1 className="text-5xl font-bold mb-4 text-center text-black">

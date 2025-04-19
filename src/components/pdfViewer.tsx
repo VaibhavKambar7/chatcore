@@ -18,11 +18,7 @@ export function PDFViewer({ loading, error, pdfUrl }: PDFViewerProps) {
           {error}
         </div>
       ) : pdfUrl ? (
-        <iframe
-          src={pdfUrl}
-          className="w-full h-full"
-          title="PDF Viewer"
-        />
+        <iframe src={pdfUrl} className="w-full h-full" title="PDF Viewer" />
       ) : (
         <div className="flex items-center justify-center h-full text-gray-500">
           No PDF loaded
