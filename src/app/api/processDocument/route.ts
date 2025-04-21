@@ -7,6 +7,7 @@ import { getFileFromS3 } from "@/service/s3Service";
 import { upsertData } from "@/service/uploadService";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import "../../../../logger";
 
 export async function POST(req: Request) {
   try {
@@ -36,6 +37,7 @@ export async function POST(req: Request) {
 
     const { text, totalPages } = await extractTextFromPDF(pdfBuffer);
     const chunkOutputs = await chunkText(text, totalPages);
+    console.log("Chunk outputs:", JSON.stringify(chunkOutputs, null, 4));
     const embeddedChunks = await embedChunks(chunkOutputs);
 
     await upsertData(embeddedChunks, id);

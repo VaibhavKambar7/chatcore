@@ -36,6 +36,7 @@ export const upsertData = async (embeddedChunks: ChunkType[], slug: string) => {
     metadata: {
       ...chunk.metadata,
       text: chunk.text,
+      context: chunk.metadata.context,
     },
   }));
 

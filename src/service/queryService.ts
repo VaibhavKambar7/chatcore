@@ -26,26 +26,26 @@ export const queryDB = async (
   try {
     const queryEmbedding = await embedQuery(query);
 
-    const filters = sectionTitle
-      ? { sectionTitle: { $eq: sectionTitle } }
-      : undefined;
-
     const response = await index.namespace(slug).query({
       topK: 5,
       vector: queryEmbedding,
       includeValues: false,
       includeMetadata: true,
-      filter: filters,
+      // filter: filters,
     });
 
+    console.log("Response:", JSON.stringify(response.matches, null, 4));
+
     if (response.matches && response.matches.length > 0) {
-      return response.matches
+      const ans = response.matches
         .map((match) => {
           const text = match.metadata?.text || "No text available";
-          const title = match.metadata?.sectionTitle;
-          return title ? `[${title}]\n${text}` : text;
+          const context = match.metadata?.context;
+          return context ? `Context: ${context}\n${text}` : text;
         })
         .join("\n\n");
+      console.log("Answer:", JSON.stringify(ans, null, 4));
+      return ans;
     }
 
     return "No matching results found.";
