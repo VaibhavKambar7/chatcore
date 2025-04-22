@@ -93,7 +93,7 @@ export default function Sidebar({
   );
 
   const fetchChats = useCallback(
-    async (page: number = 1) => {
+    async (page: number = 1, existingChats: Chat[] = []) => {
       try {
         setError(null);
         if (page === 1) setLoading(true);
@@ -102,22 +102,16 @@ export default function Sidebar({
         const response = await axios.post<ChatsResponse>("/api/getChats", {
           email: EMAIL,
           page,
-          limit: pagination.limit,
+          limit: 10,
         });
 
         const { documents, pagination: newPagination } = response.data;
+        const updatedChats =
+          page === 1 ? documents : [...existingChats, ...documents];
 
-        if (page === 1) {
-          setChats(documents);
-        } else {
-          setChats((prevChats) => [...prevChats, ...documents]);
-        }
-
+        setChats(updatedChats);
         setPagination(newPagination);
-        cacheChats(
-          page === 1 ? documents : [...chats, ...documents],
-          newPagination,
-        );
+        cacheChats(updatedChats, newPagination);
       } catch (error) {
         setError("Failed to load chats. Please try again.");
       } finally {
@@ -125,17 +119,21 @@ export default function Sidebar({
         else setLoadingMore(false);
       }
     },
-    [pagination.limit, chats, cacheChats],
+    [cacheChats],
   );
 
   useEffect(() => {
-    const hasCachedData = loadCachedChats();
-    if (!hasCachedData) {
-      fetchChats(1);
-    } else {
-      setLoading(false);
-    }
-  }, [loadCachedChats, fetchChats]);
+    const init = async () => {
+      const hasCachedData = loadCachedChats();
+      if (!hasCachedData) {
+        await fetchChats(1, []);
+      } else {
+        setLoading(false);
+      }
+    };
+
+    init();
+  }, []);
 
   useEffect(() => {
     if (id && chats.length > 0) {
@@ -148,7 +146,7 @@ export default function Sidebar({
 
   const handleLoadMore = () => {
     if (pagination.hasMore && !loadingMore) {
-      fetchChats(pagination.page + 1);
+      fetchChats(pagination.page + 1, chats);
     }
   };
 
@@ -182,10 +180,10 @@ export default function Sidebar({
             <div className="text-gray-500 text-center">No chats found</div>
           ) : (
             <>
-              {chats.map((chat) => {
+              {chats.map((chat, index) => {
                 const isActive = activeChat === chat.slug;
                 return (
-                  <li key={chat.slug} className="mb-2">
+                  <li key={`${chat.slug}-${index}`} className="mb-2">
                     <Link
                       href={`/c/${chat.slug}`}
                       onClick={() => setActiveChat(chat.slug)}
@@ -195,9 +193,6 @@ export default function Sidebar({
                           : "text-gray-700 hover:bg-gray-200"
                       }`}
                     >
-                      <span className="mr-3">
-                        <FaFileAlt />
-                      </span>
                       {chat.fileName}
                     </Link>
                   </li>
