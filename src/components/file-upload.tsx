@@ -9,6 +9,7 @@ import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 import { useRouter } from "next/navigation";
 import { PiSpinnerBold } from "react-icons/pi";
+import { MAX_SIZE_BYTES, MAX_SIZE_MB } from "@/app/utils/constants";
 
 interface FileUploadProps {
   setPdfUrl: Dispatch<SetStateAction<string | null>>;
@@ -47,6 +48,11 @@ export function FileUpload({ setPdfUrl }: FileUploadProps) {
 
   const handleUpload = async () => {
     if (!selectedFile) return;
+
+    if (selectedFile.size > MAX_SIZE_BYTES) {
+      toast.warning(`File size exceeds ${MAX_SIZE_MB}MB limit.`);
+      return;
+    }
 
     try {
       setLoading(true);

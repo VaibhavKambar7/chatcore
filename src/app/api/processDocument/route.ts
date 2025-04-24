@@ -8,6 +8,7 @@ import { upsertData } from "@/service/uploadService";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import "../../../../logger";
+import { MAX_TOKEN_THRESHOLD } from "@/app/utils/constants";
 
 export async function POST(req: Request) {
   try {
@@ -37,7 +38,7 @@ export async function POST(req: Request) {
 
     const { text, tokenCount } = await extractTextFromPDF(pdfBuffer);
 
-    if (tokenCount > Number(process.env.MAX_TOKEN_THRESHOLD)) {
+    if (tokenCount > Number(MAX_TOKEN_THRESHOLD)) {
       const chunkOutputs = await chunkText(text, 1);
       console.log("Chunk outputs:", JSON.stringify(chunkOutputs, null, 4));
       const embeddedChunks = await embedChunks(chunkOutputs);
