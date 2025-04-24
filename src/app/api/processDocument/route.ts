@@ -35,13 +35,22 @@ export async function POST(req: Request) {
 
     const pdfBuffer = await getFileFromS3(document.objectKey);
 
-    const { text, totalPages } = await extractTextFromPDF(pdfBuffer);
-    const chunkOutputs = await chunkText(text, totalPages);
-    console.log("Chunk outputs:", JSON.stringify(chunkOutputs, null, 4));
-    const embeddedChunks = await embedChunks(chunkOutputs);
+    const { text, tokenCount } = await extractTextFromPDF(pdfBuffer);
 
-    await upsertData(embeddedChunks, id);
+    if (tokenCount > Number(process.env.MAX_TOKEN_THRESHOLD)) {
+      const chunkOutputs = await chunkText(text, 1);
+      console.log("Chunk outputs:", JSON.stringify(chunkOutputs, null, 4));
+      const embeddedChunks = await embedChunks(chunkOutputs);
 
+      await upsertData(embeddedChunks, id);
+
+      await prisma.document.update({
+        where: { slug: id },
+        data: { embeddingsGenerated: true },
+      });
+    } else {
+      console.log("Document under token threshold. Skipping embedding.");
+    }
     return NextResponse.json(
       { message: "Document processed successfully." },
       { status: 200 },

@@ -1,6 +1,11 @@
 import prisma from "@/lib/prisma";
-import { generateLLMResponse } from "@/service/llmService";
+import {
+  generateContextualLLMResponse,
+  generatePureLLMResponse,
+} from "@/service/llmService";
+import { extractTextFromPDF } from "@/service/pdfService";
 import { queryDB } from "@/service/queryService";
+import { getFileFromS3 } from "@/service/s3Service";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
@@ -14,15 +19,37 @@ export async function POST(req: Request) {
       );
     }
 
-    const context = await queryDB(query, documentId);
-
-    const llmResponse = await generateLLMResponse(query, context, history);
-
     const document = await prisma.document.findUnique({
       where: {
         slug: documentId,
       },
     });
+
+    let llmResponse;
+
+    if (document?.embeddingsGenerated) {
+      const context = await queryDB(query, documentId);
+      llmResponse = await generateContextualLLMResponse(
+        query,
+        context,
+        history,
+      );
+    } else {
+      let text = document?.extractedText;
+
+      if (!text) {
+        const pdfBuffer = await getFileFromS3(document?.objectKey as string);
+        const result = await extractTextFromPDF(pdfBuffer);
+        text = result.text;
+
+        await prisma.document.update({
+          where: { slug: documentId },
+          data: { extractedText: text },
+        });
+      }
+
+      llmResponse = await generatePureLLMResponse(query, text, history);
+    }
 
     const chatHistory = document?.chatHistory || [];
 

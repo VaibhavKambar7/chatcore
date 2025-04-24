@@ -1,10 +1,10 @@
 import nlp from "compromise";
 import { LlamaParseReader } from "llamaindex";
-import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import { pipeline } from "@xenova/transformers";
 import * as dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
+import { estimateTokenCount } from "@/app/utils/estimateTokens";
 
 dotenv.config();
 
@@ -48,7 +48,10 @@ export const extractTextFromPDF = async (pdfBuffer: Buffer) => {
 
     console.log("Extracted text:", JSON.stringify(extractedText, null, 4));
 
-    return { text: extractedText, totalPages: documents.length };
+    const tokenCount = estimateTokenCount(extractedText);
+    console.log(`Estimated token count: ${tokenCount}`);
+
+    return { text: extractedText, totalPages: documents.length, tokenCount };
   } catch (error) {
     console.error("Error extracting text from PDF with LlamaParse:", error);
     throw new Error("Failed to process the PDF file.");

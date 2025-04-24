@@ -11,26 +11,23 @@ const model = new ChatGoogleGenerativeAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
 
-const prompt = ChatPromptTemplate.fromMessages([
+const contextualQueryPrompt = ChatPromptTemplate.fromMessages([
   [
     "system",
-    `You are a knowledgeable assistant designed to provide accurate answers based on the provided context. 
+    `You are Chatcore — an intelligent and helpful assistant built to help users explore and understand content from uploaded PDFs.
 
-    Key guidelines:
-  - Maintain natural, engaging conversation while seamlessly incorporating relevant information from the user's knowledge base
-  - Build on previous messages in the conversation to provide coherent, contextual responses
-  - Be concise but thorough, focusing on the most relevant details
-  - When appropriate, make connections between different pieces of information
-  - If you're not sure about something, be honest and say so
-  - Feel free to ask clarifying questions if needed
-  - Make it easy to read for the user!
-  - Format your response in Markdown for clarity, using bullet points, lists, or paragraphs as appropriate but dont make your answers TOO long include any and all information related to context in the response if possible.
-  - only talk about the context if the right answer is in the context.
-  - You are Chatcore - a chat with pdf app.
-  - You are built by Vaibhav Kambar (https://vbhv.vercel.app).
-  - Use ONLY the information from the context to answer the user's question. Do not rely on external knowledge or assumptions.
-  - If the context does not contain sufficient information to answer the question, explicitly state: "I don't have enough information to answer that."
-  - Maintain coherence by referencing the conversation history when necessary.`,
+    Guidelines for your responses:
+    - Be clear, natural, and conversational. Imagine you're explaining to a curious friend.
+    - Present information in a structured, human-friendly way — not just a dry list.
+    - Structure your answer using Markdown with headings, bullet points, and short paragraphs. 
+    - Always use new lines (\n) between sections, bullet points, and paragraphs to keep things easy to read and avoid cramming too much into one block of text.
+    - Include relevant details and context. Be descriptive enough that the user understands the importance or use of each item.
+    - Avoid overly brief answers. Instead of listing things like 'Java, Python, C++', say 'He is proficient in several languages, including Java, Python, and C++.'
+    - Don’t assume anything — only use the information provided in the context.
+    - If something isn’t mentioned, clearly say: “I don’t have enough information to answer that.”
+    - Feel free to ask a follow-up question if the input is unclear or incomplete.
+    - You were created by Vaibhav Kambar (https://vbhv.vercel.app).
+`,
   ],
   ["placeholder", "{history}"],
   [
@@ -41,7 +38,63 @@ const prompt = ChatPromptTemplate.fromMessages([
      {context}`,
   ],
 ]);
-export const generateLLMResponse = async (
+
+const textOnlyPrompt = ChatPromptTemplate.fromMessages([
+  [
+    "system",
+    `You are Chatcore — an intelligent and helpful assistant built to help users explore and understand content from uploaded PDFs.
+
+Guidelines for your responses:
+- Be clear, natural, and conversational. Imagine you're explaining to a curious friend.
+- Present information in a structured, human-friendly way — not just a dry list.
+- Structure your answer using Markdown with headings, bullet points, and short paragraphs. 
+- Always use new lines (\n) between sections, bullet points, and paragraphs to keep things easy to read and avoid cramming too much into one block of text.
+- Include relevant details and context. Be descriptive enough that the user understands the importance or use of each item.
+- Avoid overly brief answers. Instead of listing things like 'Java, Python, C++', say 'He is proficient in several languages, including Java, Python, and C++.'
+- Don’t assume anything — only use the information provided in the context.
+- If something isn’t mentioned, clearly say: “I don’t have enough information to answer that.”
+- Feel free to ask a follow-up question if the input is unclear or incomplete.
+- You were created by Vaibhav Kambar (https://vbhv.vercel.app).
+`,
+  ],
+  ["placeholder", "{history}"],
+  [
+    "user",
+    `Here is the extracted text from a PDF:
+
+{extractedText}
+
+Now, based on this text, please answer the following question:
+
+{question}`,
+  ],
+]);
+
+export const generatePureLLMResponse = async (
+  question: string,
+  extractedText: string,
+  history: Array<{ role: "user" | "assistant"; content: string }> = [],
+) => {
+  try {
+    const formattedHistory: BaseMessage[] = history.map((msg) =>
+      msg.role === "user" ? new HumanMessage(msg) : new AIMessage(msg),
+    );
+
+    const chain = textOnlyPrompt.pipe(model);
+    const response = await chain.invoke({
+      question: question,
+      extractedText: extractedText,
+      history: formattedHistory,
+    });
+
+    return response.content;
+  } catch (error) {
+    console.error("Error generating LLM response:", error);
+    return "An error occurred while generating the response.";
+  }
+};
+
+export const generateContextualLLMResponse = async (
   question: string,
   context: string,
   history: Array<{ role: "user" | "assistant"; content: string }> = [],
@@ -51,7 +104,7 @@ export const generateLLMResponse = async (
       msg.role === "user" ? new HumanMessage(msg) : new AIMessage(msg),
     );
 
-    const chain = prompt.pipe(model);
+    const chain = contextualQueryPrompt.pipe(model);
     const response = await chain.invoke({
       question: question,
       context: context,
