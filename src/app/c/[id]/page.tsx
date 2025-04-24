@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import axios from "axios";
 import { PDFViewer } from "@/components/pdfViewer";
 import { ChatInterface } from "@/components/ui/chatInterface";
+import { toast } from "sonner";
 
 interface Message {
   role: "user" | "assistant";
@@ -82,6 +83,11 @@ const Chat = () => {
 
   const handleSend = async () => {
     if (!query.trim() || isResponding) return;
+
+    if (query.length > 4000) {
+      toast.warning("Message too long. Please limit to 4000 characters.");
+      return;
+    }
 
     const userMessage: Message = { role: "user", content: query };
     setMessages((prev) => [...prev, userMessage]);
