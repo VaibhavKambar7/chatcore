@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import axios from "axios";
 import { PDFViewer } from "@/components/pdfViewer";
-import { ChatInterface } from "@/components/ui/chatInterface";
+import { ChatInterface } from "@/components/chatInterface";
 import { toast } from "sonner";
 
 interface Message {

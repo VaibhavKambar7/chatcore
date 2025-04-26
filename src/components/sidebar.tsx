@@ -3,11 +3,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import axios from "axios";
-import { FaFileAlt } from "react-icons/fa";
 import { PiSpinnerBold } from "react-icons/pi";
 import { FiChevronDown } from "react-icons/fi";
 import Link from "next/link";
 import { GoSidebarCollapse } from "react-icons/go";
+import { useSession, signIn, signOut } from "next-auth/react";
+import { IoSparkles } from "react-icons/io5";
+import ProfileModal from "./profile-modal";
+import UpgradeModal from "./upgrade-modal";
 
 interface Chat {
   slug: string;
@@ -28,7 +31,6 @@ interface ChatsResponse {
 }
 
 const STORAGE_KEY = "chatcore_chat_data";
-const EMAIL = "vaibhavkambar@gmail.com";
 
 export default function Sidebar({
   setIsSidebarOpen,
@@ -40,13 +42,16 @@ export default function Sidebar({
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [openProfileModal, setOpenProfileModal] = useState(false);
+  const [openUpgradeModal, setOpenUpgradeModal] = useState(false);
   const [pagination, setPagination] = useState<PaginationInfo>({
     total: 0,
     page: 1,
     limit: 10,
     hasMore: false,
   });
-
+  const { data, status } = useSession();
+  const EMAIL = data?.user?.email;
   const params = useParams();
   const id = params?.id ? (params.id as string) : null;
 
@@ -150,76 +155,146 @@ export default function Sidebar({
     }
   };
 
+  const handleSignin = async () => {
+    await signIn("google");
+  };
+
   return (
-    <div className="w-72 bg-gray-100 text-gray-900 p-4 flex flex-col border-r border-gray-300 min-h-screen">
-      <div className="flex flex-row gap-2 items-center mb-6">
-        <GoSidebarCollapse
-          className="text-xl cursor-pointer"
-          onClick={() => setIsSidebarOpen(false)}
+    <>
+      {openUpgradeModal && (
+        <UpgradeModal
+          openUpgradeModal={openUpgradeModal}
+          setOpenUpgradeModal={setOpenUpgradeModal}
         />
-        <div className="text-xl font-bold">Chatcore</div>
-      </div>
-
-      <div className="mb-4">
-        <input
-          type="text"
-          placeholder="Search"
-          className="w-full bg-white text-gray-900 p-2 border border-gray-300 focus:outline-none"
-        />
-      </div>
-
-      <nav className="flex-1 overflow-y-auto scrollbar-hide">
-        <ul>
-          {loading ? (
-            <div className="flex items-center justify-center">
-              <PiSpinnerBold className="animate-spin text-xl text-gray-500" />
+      )}
+      <div className="h-screen flex">
+        <div className="w-72 flex flex-col border-r border-black">
+          <div className="sticky top-0 z-10 bg-gray-100">
+            <div className="p-4 flex flex-row gap-2 items-center mb-6">
+              <GoSidebarCollapse
+                className="text-xl cursor-pointer"
+                onClick={() => setIsSidebarOpen(false)}
+              />
+              <div className="text-xl font-bold">Chatcore</div>
             </div>
-          ) : error ? (
-            <div className="text-red-500 text-center">{error}</div>
-          ) : chats.length === 0 ? (
-            <div className="text-gray-500 text-center">No chats found</div>
-          ) : (
-            <>
-              {chats.map((chat, index) => {
-                const isActive = activeChat === chat.slug;
-                return (
-                  <li key={`${chat.slug}-${index}`} className="mb-2">
-                    <Link
-                      href={`/c/${chat.slug}`}
-                      onClick={() => setActiveChat(chat.slug)}
-                      className={`flex items-center p-3 transition-colors ${
-                        isActive
-                          ? "bg-black text-white font-semibold"
-                          : "text-gray-700 hover:bg-gray-200"
-                      }`}
-                    >
-                      {chat.fileName}
-                    </Link>
-                  </li>
-                );
-              })}
 
-              {pagination.hasMore && (
-                <li className="mt-4 text-center">
-                  <button
-                    onClick={handleLoadMore}
-                    disabled={loadingMore}
-                    className="flex items-center justify-center w-full p-2 text-gray-600 hover:bg-gray-200 transition-colors"
-                  >
-                    {loadingMore ? (
-                      <PiSpinnerBold className="animate-spin text-xl" />
+            <div className="px-4 pb-4 bg-gray-100">
+              <input
+                type="text"
+                placeholder="Search"
+                className="w-full bg-white text-gray-900 p-2 border border-gray-300 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto scrollbar-hide bg-gray-100">
+            {status === "authenticated" ? (
+              <>
+                <nav className="px-4">
+                  <ul>
+                    {loading ? (
+                      <div className="flex items-center justify-center py-4">
+                        <PiSpinnerBold className="animate-spin text-xl text-gray-500" />
+                      </div>
+                    ) : error ? (
+                      <div className="text-red-500 text-center py-4">
+                        {error}
+                      </div>
+                    ) : chats.length === 0 ? (
+                      <div className="text-gray-500 text-center py-4">
+                        No chats found
+                      </div>
                     ) : (
                       <>
-                        <FiChevronDown className="mr-1" /> Load More
+                        {chats.map((chat, index) => {
+                          const isActive = activeChat === chat.slug;
+                          return (
+                            <li key={`${chat.slug}-${index}`} className="mb-2">
+                              <Link
+                                href={`/c/${chat.slug}`}
+                                onClick={() => setActiveChat(chat.slug)}
+                                className={`flex items-center p-3 transition-colors ${
+                                  isActive
+                                    ? "bg-black text-white font-semibold"
+                                    : "text-gray-700 hover:bg-gray-200"
+                                }`}
+                              >
+                                {chat.fileName}
+                              </Link>
+                            </li>
+                          );
+                        })}
+
+                        {pagination.hasMore && (
+                          <li className="mt-4 text-center">
+                            <button
+                              onClick={handleLoadMore}
+                              disabled={loadingMore}
+                              className="flex items-center justify-center w-full p-2 text-gray-600 hover:bg-black transition-colors"
+                            >
+                              {loadingMore ? (
+                                <PiSpinnerBold className="animate-spin text-xl" />
+                              ) : (
+                                <>
+                                  <FiChevronDown className="mr-1" /> Load More
+                                </>
+                              )}
+                            </button>
+                          </li>
+                        )}
                       </>
                     )}
-                  </button>
-                </li>
-              )}
+                  </ul>
+                </nav>
+              </>
+            ) : (
+              <div className="flex flex-1 flex-col justify-center items-center bg-gray-100">
+                <p className="text-gray-500 mb-6">
+                  Sign in to save your chat history
+                </p>
+                <button
+                  onClick={handleSignin}
+                  className="border-0 bg-black cursor-pointer text-white w-30 h-10"
+                >
+                  Sign In
+                </button>
+              </div>
+            )}
+          </div>
+          {status === "authenticated" && (
+            <>
+              <div
+                onClick={() => setOpenProfileModal(true)}
+                className="flex items-center cursor-pointer justify-center gap-3 px-6 py-3 border-t border-black bg-white text-black"
+              >
+                <img
+                  src={data.user?.image ?? "/default-avatar.png"}
+                  alt={data.user?.name ?? "User Avatar"}
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+                <div className="text-md font-medium">
+                  {data.user?.name ?? "Anonymous"}
+                </div>
+              </div>
+              <div
+                onClick={() => setOpenUpgradeModal(true)}
+                className="flex items-center justify-center cursor-pointer h-15 gap-3 px-4 py-3 border-t border-black bg-black text-white"
+              >
+                <IoSparkles />
+                Upgrade to Plus
+              </div>
             </>
           )}
-        </ul>
-      </nav>
-    </div>
+          {openProfileModal && (
+            <ProfileModal
+              openProfileModal={openProfileModal}
+              setOpenProfileModal={setOpenProfileModal}
+              openUpgradeModal={openUpgradeModal}
+              setOpenUpgradeModal={setOpenUpgradeModal}
+            />
+          )}
+        </div>
+      </div>
+    </>
   );
 }

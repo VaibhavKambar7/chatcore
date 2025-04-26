@@ -137,7 +137,7 @@ export function FileUpload({ setPdfUrl }: FileUploadProps) {
           ) : selectedFile ? (
             <span className="tracking-wide">Upload PDF</span>
           ) : (
-            <span className="tracking-wide">Choose PDF</span>
+            <span className="tracking-wide cursor-pointer">Choose PDF</span>
           )}
         </div>
         <input

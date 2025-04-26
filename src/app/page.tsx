@@ -12,9 +12,9 @@ export default function Home() {
   return (
     <div className="flex h-screen">
       {!isSidebarOpen && (
-        <div className="w-14 bg-gray-100">
+        <div className="w-14 bg-gray-100 border-r-black border-1">
           <GoSidebarExpand
-            className="text-xl mt-5 ml-4"
+            className="text-xl mt-5 ml-4 cursor-pointer"
             onClick={() => setIsSidebarOpen(true)}
           />
         </div>
