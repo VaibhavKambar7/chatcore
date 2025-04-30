@@ -1,10 +1,13 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import axios from "axios";
 import { PDFViewer } from "@/components/pdfViewer";
 import { ChatInterface } from "@/components/chatInterface";
 import { toast } from "sonner";
+import { getIP } from "@/app/utils/getIP";
+import { useSession } from "next-auth/react";
+import { MESSAGE_LIMIT } from "@/app/utils/constants";
 
 interface Message {
   role: "user" | "assistant";
@@ -19,6 +22,18 @@ const Chat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isResponding, setIsResponding] = useState<boolean>(false);
   const [pdfUrl, setPdfUrl] = useState<string>("");
+
+  const { data } = useSession();
+
+  const ipRef = useRef<string>("");
+
+  useEffect(() => {
+    const fetchIP = async () => {
+      const ip = await getIP();
+      ipRef.current = ip;
+    };
+    fetchIP();
+  }, []);
 
   useEffect(() => {
     const fetchChatsAndPdf = async () => {
@@ -89,12 +104,24 @@ const Chat = () => {
       return;
     }
 
+    const ip = ipRef.current;
+
     const userMessage: Message = { role: "user", content: query };
     setMessages((prev) => [...prev, userMessage]);
     setQuery("");
     setIsResponding(true);
 
     try {
+      const usage = await axios.post("/api/rate-limit/get-usage", {
+        ip: ip,
+        email: data?.user?.email,
+      });
+
+      if (usage.data.messageCount >= MESSAGE_LIMIT) {
+        toast.warning("You have reached the limit of 20 messages.");
+        return;
+      }
+
       const response = await axios.post("/api/query", {
         query,
         history: messages,
@@ -105,6 +132,11 @@ const Chat = () => {
         content: response.data.response,
       };
       setMessages((prevMessages) => [...prevMessages, assistantMessage]);
+
+      await axios.post("/api/rate-limit/increment-message", {
+        ip: ip,
+        email: data?.user?.email,
+      });
     } catch (err) {
       console.error("Error fetching response:", err);
       setError((err as Error).message || "Failed to get response");

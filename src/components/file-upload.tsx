@@ -9,7 +9,9 @@ import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 import { useRouter } from "next/navigation";
 import { PiSpinnerBold } from "react-icons/pi";
-import { MAX_SIZE_BYTES, MAX_SIZE_MB } from "@/app/utils/constants";
+import { MAX_SIZE_BYTES, MAX_SIZE_MB, PDF_LIMIT } from "@/app/utils/constants";
+import { useSession } from "next-auth/react";
+import { getIP } from "@/app/utils/getIP";
 
 interface FileUploadProps {
   setPdfUrl: Dispatch<SetStateAction<string | null>>;
@@ -20,6 +22,7 @@ export function FileUpload({ setPdfUrl }: FileUploadProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { data } = useSession();
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -54,8 +57,29 @@ export function FileUpload({ setPdfUrl }: FileUploadProps) {
       return;
     }
 
+    if (
+      !selectedFile.name.endsWith(".pdf") ||
+      selectedFile.type !== "application/pdf"
+    ) {
+      toast.warning("Please upload a PDF file.");
+      return;
+    }
+
     try {
       setLoading(true);
+
+      const ip = await getIP();
+      const usage = await axios.post("/api/rate-limit/get-usage", {
+        ip: ip,
+        email: data?.user?.email,
+      });
+
+      if (usage.data.pdfCount >= PDF_LIMIT) {
+        toast.warning("You have reached the limit of 2 PDFs.");
+        setLoading(false);
+        return;
+      }
+
       const id = uuidv4();
 
       const response = await axios.post(
@@ -64,6 +88,7 @@ export function FileUpload({ setPdfUrl }: FileUploadProps) {
           fileName: selectedFile?.name,
           fileType: selectedFile?.type,
           slug: id,
+          ip: ip,
         },
         {
           headers: {
@@ -73,6 +98,8 @@ export function FileUpload({ setPdfUrl }: FileUploadProps) {
       );
 
       const signedUrl = response.data.signedUrl;
+
+      console.log("Signed URL:", signedUrl);
 
       await axios.put(signedUrl, selectedFile, {
         headers: {
@@ -84,6 +111,16 @@ export function FileUpload({ setPdfUrl }: FileUploadProps) {
       router.push(`/c/${id}`);
       setLoading(false);
       toast.success("File uploaded successfully!");
+
+      const result = await axios.post("/api/rate-limit/increment-pdf", {
+        ip: ip,
+        email: data?.user?.email,
+      });
+
+      if (result.data.error) {
+        toast.error(result.data.error);
+        return;
+      }
     } catch (error) {
       setLoading(false);
       console.error("Upload error:", error);

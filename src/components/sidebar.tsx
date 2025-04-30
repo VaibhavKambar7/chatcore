@@ -11,6 +11,8 @@ import { useSession, signIn, signOut } from "next-auth/react";
 import { IoSparkles } from "react-icons/io5";
 import ProfileModal from "./profile-modal";
 import UpgradeModal from "./upgrade-modal";
+import { getIP } from "@/app/utils/getIP";
+import Image from "next/image";
 
 interface Chat {
   slug: string;
@@ -248,7 +250,16 @@ export default function Sidebar({
                 </nav>
               </>
             ) : (
-              <div className="flex flex-1 flex-col justify-center items-center bg-gray-100">
+              <div className="flex flex-col justify-center items-center bg-gray-100">
+                <div className="flex items-center justify-center">
+                  <Image
+                    src="/assets/signin.png"
+                    alt="Sign In"
+                    width={4000}
+                    height={4080}
+                    className="h-auto w-3/4 object-contain"
+                  />
+                </div>
                 <p className="text-gray-500 mb-6">
                   Sign in to save your chat history
                 </p>

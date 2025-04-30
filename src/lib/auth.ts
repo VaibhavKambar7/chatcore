@@ -16,23 +16,34 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ profile }) {
       if (!profile?.email) {
-        throw new Error("No profile found :(");
+        console.error("SignIn callback: No profile email found.");
+        return false;
       }
 
-      await prisma.user.upsert({
-        where: {
-          email: profile.email,
-        },
-        create: {
-          email: profile.email,
-          name: profile.name,
-        },
-        update: {
-          name: profile.name,
-        },
-      });
+      try {
+        const existingUser = await prisma.user.findUnique({
+          where: { email: profile.email },
+        });
 
-      return true;
+        if (existingUser) {
+          if (profile.name && existingUser.name !== profile.name) {
+            await prisma.user.update({
+              where: { email: profile.email },
+              data: { name: profile.name },
+            });
+            console.log(`Updated name for user ${profile.email}`);
+          }
+        } else {
+          console.log(
+            `SignIn callback: User ${profile.email} not found. Creation deferred to post-login flow with IP.`,
+          );
+        }
+
+        return true;
+      } catch (error) {
+        console.error("Error during signIn callback:", error);
+        return false;
+      }
     },
   },
 };

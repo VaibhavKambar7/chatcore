@@ -16,23 +16,38 @@ datasource db {
 
 model User {
   id        String     @id @default(uuid())
-  email     String     @unique
+  email     String?    @unique
+  ip        String     @unique
   name      String?
   documents Document[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
+  usage     Usage?     @relation("UserToUsage")
 }
 
 model Document {
-  id            String  @id @default(uuid())
-  objectKey     String  @unique
-  slug          String  @unique
-  fileName      String
-  userId        String
-  extractedText String? 
+  id                  String   @id @default(uuid())
+  objectKey           String   @unique
+  slug                String   @unique
+  fileName            String
+  userId              String
+  extractedText       String?
   User                User     @relation(fields: [userId], references: [id])
   chatHistory         Json[]
   embeddingsGenerated Boolean  @default(false)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+}
+
+model Usage {
+  id           String   @id @default(uuid())
+  email        String?  @unique
+  ip           String   @unique
+  pdfCount     Int      @default(0)
+  messageCount Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  userId String? @unique
+  User   User?   @relation("UserToUsage", fields: [userId], references: [id])
 }
