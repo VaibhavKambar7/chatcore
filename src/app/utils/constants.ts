@@ -2,7 +2,7 @@ const MAX_TOKEN_THRESHOLD = 25000;
 const MAX_SIZE_MB = 10;
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 const PDF_LIMIT = 2;
-const MESSAGE_LIMIT = 5;
+const MESSAGE_LIMIT = 20;
 
 export {
   MAX_TOKEN_THRESHOLD,

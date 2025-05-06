@@ -164,7 +164,6 @@ export async function POST(req: Request) {
     return NextResponse.json({
       pdfCount: usage.pdfCount,
       messageCount: usage.messageCount,
-      userId: user?.id,
     });
   } catch (error) {
     console.error("Get Usage Error:", error);

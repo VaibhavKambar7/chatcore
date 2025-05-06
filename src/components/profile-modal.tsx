@@ -1,8 +1,11 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogPortal, DialogTitle } from "./ui/dialog";
 import { signOut, useSession } from "next-auth/react";
 import { Progress } from "./ui/progress";
 import UpgradeModal from "./upgrade-modal";
+import axios from "axios";
+import { PDF_LIMIT, MESSAGE_LIMIT } from "@/app/utils/constants";
+import { getIP } from "@/app/utils/getIP";
 
 interface UserProfileModalProps {
   openProfileModal: boolean;
@@ -18,6 +21,10 @@ const ProfileModal: React.FC<UserProfileModalProps> = ({
   setOpenUpgradeModal,
 }) => {
   const { data } = useSession();
+  const [usage, setUsage] = useState({
+    pdfCount: 0,
+    messageCount: 0,
+  });
 
   const handleSignOut = async () => {
     try {
@@ -26,6 +33,18 @@ const ProfileModal: React.FC<UserProfileModalProps> = ({
       console.error("Error signing out:", error);
     }
   };
+
+  useEffect(() => {
+    const getUsage = async () => {
+      const usage = await axios.post("/api/rate-limit/get-usage", {
+        ip: getIP(),
+        email: data?.user?.email,
+      });
+      setUsage(usage.data);
+    };
+
+    getUsage();
+  }, []);
 
   return (
     <>
@@ -58,12 +77,22 @@ const ProfileModal: React.FC<UserProfileModalProps> = ({
 
               <div className="space-y-3 border-t pt-5">
                 <div className="flex flex-row items-center justify-between">
-                  <Progress value={10} className="w-120 h-3" />
-                  <p className="text-md ml-3">1/2 PDFs</p>
+                  <Progress
+                    value={(usage.pdfCount / PDF_LIMIT) * 100}
+                    className="w-120 h-3"
+                  />
+                  <p className="text-md ml-3">
+                    {usage.pdfCount}/{PDF_LIMIT} PDFs
+                  </p>
                 </div>
                 <div className="flex flex-row items-center justify-between">
-                  <Progress value={30} className="w-120 h-3" />
-                  <p className="text-md ml-3">4/20 Messages</p>
+                  <Progress
+                    value={(usage.messageCount / MESSAGE_LIMIT) * 100}
+                    className="w-120 h-3"
+                  />
+                  <p className="text-md ml-3">
+                    {usage.messageCount}/{MESSAGE_LIMIT} Messages
+                  </p>
                 </div>
               </div>
 
