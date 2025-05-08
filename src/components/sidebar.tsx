@@ -11,8 +11,8 @@ import { useSession, signIn, signOut } from "next-auth/react";
 import { IoSparkles } from "react-icons/io5";
 import ProfileModal from "./profile-modal";
 import UpgradeModal from "./upgrade-modal";
-import { getIP } from "@/app/utils/getIP";
 import Image from "next/image";
+import { STORAGE_KEY } from "@/app/utils/constants";
 
 interface Chat {
   slug: string;
@@ -32,8 +32,6 @@ interface ChatsResponse {
   pagination: PaginationInfo;
 }
 
-const STORAGE_KEY = "chatcore_chat_data";
-
 export default function Sidebar({
   setIsSidebarOpen,
 }: {
@@ -52,6 +50,7 @@ export default function Sidebar({
     limit: 10,
     hasMore: false,
   });
+  const [searchQuery, setSearchQuery] = useState("");
   const { data, status } = useSession();
   const EMAIL = data?.user?.email;
   const params = useParams();
@@ -131,16 +130,18 @@ export default function Sidebar({
 
   useEffect(() => {
     const init = async () => {
-      const hasCachedData = loadCachedChats();
-      if (!hasCachedData) {
+      try {
         await fetchChats(1, []);
-      } else {
+      } catch (err) {
+        const hasCachedData = loadCachedChats();
+        if (!hasCachedData) setChats([]);
+      } finally {
         setLoading(false);
       }
     };
 
     init();
-  }, []);
+  }, [EMAIL]);
 
   useEffect(() => {
     if (id && chats.length > 0) {
@@ -159,6 +160,30 @@ export default function Sidebar({
 
   const handleSignin = async () => {
     await signIn("google");
+  };
+
+  useEffect(() => {
+    const delayDebounce = setTimeout(() => {
+      handleSearch();
+    }, 500);
+
+    return () => clearTimeout(delayDebounce);
+  }, [searchQuery]);
+
+  const handleSearch = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.post(`/api/searchChats`, {
+        email: EMAIL,
+        keyword: searchQuery.trim() || null,
+      });
+      const { documents } = res.data;
+      setChats(documents);
+    } catch (err) {
+      console.error("Search error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -184,6 +209,11 @@ export default function Sidebar({
               <input
                 type="text"
                 placeholder="Search"
+                value={searchQuery}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setSearchQuery(value);
+                }}
                 className="w-full bg-white text-gray-900 p-2 border border-gray-300 focus:outline-none"
               />
             </div>
