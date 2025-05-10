@@ -1,13 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { FileUpload } from "@/components/file-upload";
 import Sidebar from "@/components/sidebar";
 import { GoSidebarExpand } from "react-icons/go";
+import { getIP } from "@/app/utils/getIP";
 
 export default function Home() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const ipRef = useRef<string>("");
+
+  useEffect(() => {
+    const fetchIP = async () => {
+      const ip = await getIP();
+      ipRef.current = ip;
+    };
+    fetchIP();
+  }, []);
 
   return (
     <div className="flex h-screen">
@@ -19,7 +30,9 @@ export default function Home() {
           />
         </div>
       )}
-      {isSidebarOpen && <Sidebar setIsSidebarOpen={setIsSidebarOpen} />}
+      {isSidebarOpen && (
+        <Sidebar setIsSidebarOpen={setIsSidebarOpen} ip={ipRef.current} />
+      )}
       <div className="flex-1 flex flex-col items-center justify-center p-8 bg-white">
         <h1 className="text-5xl font-bold mb-4 text-center text-black">
           Chat with any

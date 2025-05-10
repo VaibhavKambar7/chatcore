@@ -13,7 +13,6 @@ import ProfileModal from "./profile-modal";
 import UpgradeModal from "./upgrade-modal";
 import Image from "next/image";
 import { STORAGE_KEY } from "@/app/utils/constants";
-import { getIP } from "@/app/utils/getIP";
 
 interface Chat {
   slug: string;
@@ -35,8 +34,10 @@ interface ChatsResponse {
 
 export default function Sidebar({
   setIsSidebarOpen,
+  ip,
 }: {
   setIsSidebarOpen: (open: boolean) => void;
+  ip: string;
 }) {
   const [activeChat, setActiveChat] = useState<string | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
@@ -68,7 +69,7 @@ export default function Sidebar({
     const fetchUsage = async () => {
       try {
         const response = await axios.post("/api/rate-limit/get-usage", {
-          ip: getIP(),
+          ip: ip,
           email: data?.user?.email,
         });
         setUsage(response.data);
@@ -143,7 +144,11 @@ export default function Sidebar({
         setPagination(newPagination);
         cacheChats(updatedChats, newPagination);
       } catch (error) {
-        setError("Failed to load chats. Please try again.");
+        if (axios.isAxiosError(error) && error.response?.status === 404) {
+          setChats([]);
+        } else {
+          setError("Failed to load chats. Please try again.");
+        }
       } finally {
         if (page === 1) setLoading(false);
         else setLoadingMore(false);

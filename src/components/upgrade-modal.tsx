@@ -197,10 +197,10 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
                       ) : isUpgradeToYearly ? (
                         "Switch to Yearly"
                       ) : (
-                        <>
+                        <div className="flex items-center gap-2">
                           <IoSparkles />
                           Upgrade to Plus
-                        </>
+                        </div>
                       )}
                     </p>
                   </div>
