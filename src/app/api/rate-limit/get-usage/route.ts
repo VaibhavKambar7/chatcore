@@ -15,18 +15,25 @@ export async function POST(req: Request) {
 
     let user = null;
     let usage = null;
+    let isProUser = false;
+    let plan = null;
 
     if (email) {
       user = await prisma.user.findUnique({
         where: { email },
-        include: { usage: true },
+        include: { usage: true, subscription: true },
       });
 
       if (!user) {
         const userByIp = await prisma.user.findUnique({
           where: { ip },
-          include: { usage: true },
+          include: { usage: true, subscription: true },
         });
+
+        if (userByIp) {
+          isProUser = userByIp.subscription?.status === "ACTIVE";
+          plan = userByIp.subscription?.plan;
+        }
 
         if (userByIp && !userByIp.email) {
           console.log(
@@ -80,6 +87,8 @@ export async function POST(req: Request) {
         }
       } else {
         usage = user.usage;
+        isProUser = user.subscription?.status === "ACTIVE";
+        plan = user.subscription?.plan;
       }
     }
 
@@ -164,6 +173,8 @@ export async function POST(req: Request) {
     return NextResponse.json({
       pdfCount: usage.pdfCount,
       messageCount: usage.messageCount,
+      isProUser,
+      plan,
     });
   } catch (error) {
     console.error("Get Usage Error:", error);

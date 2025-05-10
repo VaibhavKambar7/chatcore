@@ -14,15 +14,27 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum Plan {
+  MONTHLY
+  YEARLY
+}
+
+enum Status {
+  ACTIVE
+  CANCELED
+  INCOMPLETE
+}
+
 model User {
-  id        String     @id @default(uuid())
-  email     String?    @unique
-  ip        String     @unique
-  name      String?
-  documents Document[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  usage     Usage?     @relation("UserToUsage")
+  id           String        @id @default(uuid())
+  email        String?       @unique
+  ip           String        @unique
+  name         String?
+  documents    Document[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  usage        Usage?        @relation("UserToUsage")
+  subscription Subscription?
 }
 
 model Document {
@@ -50,4 +62,20 @@ model Usage {
 
   userId String? @unique
   User   User?   @relation("UserToUsage", fields: [userId], references: [id])
+}
+
+model Subscription {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  stripeCustomerId     String
+  stripeSubscriptionId String
+  plan                 Plan
+  status               Status
+  startDate            DateTime
+  endDate              DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

@@ -117,7 +117,7 @@ const Chat = () => {
         email: data?.user?.email,
       });
 
-      if (usage.data.messageCount >= MESSAGE_LIMIT) {
+      if (!usage.data.isProUser && usage.data.messageCount >= MESSAGE_LIMIT) {
         toast.warning("You have reached the limit of 20 messages.");
         return;
       }

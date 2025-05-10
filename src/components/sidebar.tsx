@@ -13,6 +13,7 @@ import ProfileModal from "./profile-modal";
 import UpgradeModal from "./upgrade-modal";
 import Image from "next/image";
 import { STORAGE_KEY } from "@/app/utils/constants";
+import { getIP } from "@/app/utils/getIP";
 
 interface Chat {
   slug: string;
@@ -55,6 +56,29 @@ export default function Sidebar({
   const EMAIL = data?.user?.email;
   const params = useParams();
   const id = params?.id ? (params.id as string) : null;
+
+  const [usage, setUsage] = useState({
+    pdfCount: 0,
+    messageCount: 0,
+    isProUser: false,
+    plan: null,
+  });
+
+  useEffect(() => {
+    const fetchUsage = async () => {
+      try {
+        const response = await axios.post("/api/rate-limit/get-usage", {
+          ip: getIP(),
+          email: data?.user?.email,
+        });
+        setUsage(response.data);
+      } catch (error) {
+        console.error("Failed to fetch usage data:", error);
+      }
+    };
+
+    if (data?.user?.email) fetchUsage();
+  }, [data?.user?.email]);
 
   const loadCachedChats = useCallback(() => {
     try {
@@ -174,7 +198,6 @@ export default function Sidebar({
     setLoading(true);
     try {
       const res = await axios.post(`/api/searchChats`, {
-        email: EMAIL,
         keyword: searchQuery.trim() || null,
       });
       const { documents } = res.data;
@@ -192,6 +215,7 @@ export default function Sidebar({
         <UpgradeModal
           openUpgradeModal={openUpgradeModal}
           setOpenUpgradeModal={setOpenUpgradeModal}
+          usage={usage}
         />
       )}
       <div className="h-screen flex">
@@ -332,6 +356,7 @@ export default function Sidebar({
               setOpenProfileModal={setOpenProfileModal}
               openUpgradeModal={openUpgradeModal}
               setOpenUpgradeModal={setOpenUpgradeModal}
+              usage={usage}
             />
           )}
         </div>

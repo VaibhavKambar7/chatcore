@@ -74,7 +74,7 @@ export function FileUpload({ setPdfUrl }: FileUploadProps) {
         email: data?.user?.email,
       });
 
-      if (usage.data.pdfCount >= PDF_LIMIT) {
+      if (!usage.data.isProUser && usage.data.pdfCount >= PDF_LIMIT) {
         toast.warning("You have reached the limit of 2 PDFs.");
         setLoading(false);
         return;
@@ -158,7 +158,7 @@ export function FileUpload({ setPdfUrl }: FileUploadProps) {
 
       <Button
         variant="secondary"
-        className="bg-black text-white hover:bg-gray-800 rounded-none px-6 py-3 text-base w-[160px] h-[48px] flex items-center justify-center"
+        className="bg-black text-white cursor-pointer hover:bg-gray-800 rounded-none px-6 py-3 text-base w-[160px] h-[48px] flex items-center justify-center"
         onClick={() => {
           if (selectedFile) {
             handleUpload();
@@ -174,7 +174,7 @@ export function FileUpload({ setPdfUrl }: FileUploadProps) {
           ) : selectedFile ? (
             <span className="tracking-wide">Upload PDF</span>
           ) : (
-            <span className="tracking-wide cursor-pointer">Choose PDF</span>
+            <span className="tracking-wide">Choose PDF</span>
           )}
         </div>
         <input
