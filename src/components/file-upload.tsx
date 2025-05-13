@@ -99,8 +99,6 @@ export function FileUpload({ setPdfUrl }: FileUploadProps) {
 
       const signedUrl = response.data.signedUrl;
 
-      console.log("Signed URL:", signedUrl);
-
       await axios.put(signedUrl, selectedFile, {
         headers: {
           "Content-Type": selectedFile.type,
@@ -125,9 +123,15 @@ export function FileUpload({ setPdfUrl }: FileUploadProps) {
       setLoading(false);
       console.error("Upload error:", error);
       if (axios.isAxiosError(error)) {
-        toast.error(
-          `Upload failed: ${error.response?.data?.message || error.message}`,
-        );
+        if (error.response?.status === 404) {
+          console.error(
+            `Upload failed: ${error.response?.data?.message || error.message}`,
+          );
+        } else {
+          toast.error(
+            `Upload failed: ${error.response?.data?.message || error.message}`,
+          );
+        }
       } else {
         toast.error("Upload failed. Check console for details.");
       }

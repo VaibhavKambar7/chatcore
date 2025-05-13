@@ -196,22 +196,7 @@ export default function Home() {
                   variants={childVariants}
                   className="mx-auto max-w-3xl rounded-none border-2 border-dashed border-gray-200 bg-gray-50 p-8"
                 >
-                  {pdfUrl ? (
-                    <div className="flex flex-col items-center">
-                      <FileText className="mb-4 h-16 w-16 text-black" />
-                      <p className="mb-4 text-sm text-gray-600">
-                        Your PDF is ready!
-                      </p>
-                      <Button
-                        className="bg-black text-white hover:bg-gray-800"
-                        onClick={() => setIsSidebarOpen(true)}
-                      >
-                        Start chatting <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <FileUpload setPdfUrl={(url) => setPdfUrl(url)} />
-                  )}
+                  <FileUpload setPdfUrl={(url) => setPdfUrl(url)} />
                 </motion.div>
                 <motion.p
                   variants={childVariants}
@@ -250,7 +235,6 @@ export default function Home() {
                       to your questions.
                     </p>
                   </motion.div>
-
                   <motion.div
                     variants={childVariants}
                     className="rounded-none bg-white p-6 shadow-sm"
