@@ -32,6 +32,7 @@
     "compromise": "^14.14.4",
     "dotenv": "^16.4.7",
     "formidable": "^3.5.2",
+    "framer-motion": "^12.11.0",
     "langchain": "^0.3.23",
     "llamaindex": "^0.9.11",
     "lucide-react": "^0.483.0",
