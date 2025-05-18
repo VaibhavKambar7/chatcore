@@ -5,13 +5,7 @@ import { FileUpload } from "@/components/file-upload";
 import { GoSidebarExpand } from "react-icons/go";
 import { getIP } from "@/app/utils/getIP";
 import { Button } from "@/components/ui/button";
-import {
-  ArrowRight,
-  FileText,
-  MessageSquare,
-  Zap,
-  BookOpen,
-} from "lucide-react";
+import { FileText, MessageSquare, Zap, BookOpen } from "lucide-react";
 import { IoSparkles } from "react-icons/io5";
 import Sidebar from "@/components/sidebar";
 import { motion } from "framer-motion";
@@ -26,7 +20,6 @@ export default function Home() {
   const ipRef = useRef<string>("");
 
   const featuresRef = useRef<HTMLElement>(null);
-  const howItWorksRef = useRef<HTMLElement>(null);
   const homeRef = useRef<HTMLElement>(null);
   const faqRef = useRef<HTMLElement>(null);
   const pricingRef = useRef<HTMLElement>(null);
@@ -130,17 +123,6 @@ export default function Home() {
                       }
                     >
                       Features
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="#"
-                      className="text-sm text-gray-600 hover:text-gray-900"
-                      onClick={() =>
-                        scrollToSection(howItWorksRef as RefObject<HTMLElement>)
-                      }
-                    >
-                      How It Works
                     </a>
                   </li>
                   <li>
@@ -271,7 +253,6 @@ export default function Home() {
             </motion.section>
 
             <motion.section
-              ref={howItWorksRef}
               className="py-24"
               initial="hidden"
               whileInView="visible"
@@ -455,7 +436,7 @@ export default function Home() {
               </div>
             </motion.section>
 
-            <section className="py-24">
+            <section className="py-24" ref={pricingRef}>
               <div className="container mx-auto px-4">
                 <h3 className="mb-12 text-center text-2xl font-bold text-gray-900 md:text-3xl">
                   Pricing Plans

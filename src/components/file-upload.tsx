@@ -162,7 +162,10 @@ export function FileUpload({ setPdfUrl }: FileUploadProps) {
 
       <Button
         variant="secondary"
-        className="bg-black text-white cursor-pointer hover:bg-gray-800 rounded-none px-6 py-3 text-base w-[160px] h-[48px] flex items-center justify-center"
+        className={`
+    ${selectedFile ? "bg-black text-white border-black" : "bg-white text-black border-black"}
+    border-2 cursor-pointer hover:bg-black hover:text-white rounded-none px-6 py-3 text-base w-[160px] h-[48px] flex items-center justify-center
+  `}
         onClick={() => {
           if (selectedFile) {
             handleUpload();

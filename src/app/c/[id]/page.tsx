@@ -12,6 +12,7 @@ import { MESSAGE_LIMIT } from "@/app/utils/constants";
 interface Message {
   role: "user" | "assistant";
   content: string;
+  isProcessing?: boolean;
 }
 
 const Chat = () => {
@@ -22,10 +23,11 @@ const Chat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isResponding, setIsResponding] = useState<boolean>(false);
   const [pdfUrl, setPdfUrl] = useState<string>("");
+  const [isProcessing, setIsProcessing] = useState<boolean>(true);
 
   const { data } = useSession();
-
   const ipRef = useRef<string>("");
+  const isProcessingRef = useRef<boolean>(false);
 
   useEffect(() => {
     const fetchIP = async () => {
@@ -36,17 +38,35 @@ const Chat = () => {
   }, []);
 
   useEffect(() => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+
     const fetchChatsAndPdf = async () => {
       setLoading(true);
-      try {
-        const chatResponse = await axios.post("/api/getConversation", {
-          id: params.id,
-        });
-        const chats = chatResponse?.data?.response?.chatHistory;
+      setIsProcessing(true);
+      setMessages([
+        {
+          role: "assistant",
+          content: "Processing your PDF...",
+          isProcessing: true,
+        },
+      ]);
 
-        if (chats?.[0]) {
-          setMessages(chats);
+      try {
+        const [documentResponse, pdfResponse] = await Promise.all([
+          axios.post("/api/getConversation", { id: params.id }),
+          axios.post("/api/getPdf", { id: params.id }),
+        ]);
+
+        const { chatHistory, embeddingsGenerated } =
+          documentResponse?.data?.response || {};
+        if (chatHistory?.[0]) {
+          setMessages(chatHistory);
+          setIsProcessing(false);
         } else {
+          if (!embeddingsGenerated) {
+            await handlePdf();
+          }
           setMessages([
             {
               role: "assistant",
@@ -54,29 +74,26 @@ const Chat = () => {
                 "Got it! Your PDF is ready for questions. What do you need to know?",
             },
           ]);
-          await handlePdf();
+          setIsProcessing(false);
         }
-
-        const pdfResponse = await axios.post("/api/getPdf", {
-          id: params.id,
-        });
 
         if (!pdfResponse.data.pdf) {
           throw new Error("PDF data not found");
         }
-
         setPdfUrl(`data:application/pdf;base64,${pdfResponse.data.pdf}`);
-        setLoading(false);
       } catch (error) {
-        console.error("Error fetching chats:", error);
+        console.error("Error fetching chats or PDF:", error);
         setMessages([
           {
             role: "assistant",
-            content: "Error loading chat history. Please try again.",
+            content: "Error loading chat history or PDF. Please try again.",
           },
         ]);
+        setIsProcessing(false);
+        toast.error("Failed to load chat history or PDF.");
       } finally {
         setLoading(false);
+        isProcessingRef.current = false;
       }
     };
 
@@ -86,18 +103,16 @@ const Chat = () => {
   const handlePdf = async () => {
     setError("");
     try {
-      const result = await axios.post("/api/processDocument", {
-        id: params.id,
-      });
-      console.log("API response:", result);
+      await axios.post("/api/processDocument", { id: params.id });
     } catch (err) {
-      console.error("Error fetching document:", err);
+      console.error("Error processing document:", err);
       setError((err as Error).message);
+      toast.error("Failed to process document.");
     }
   };
 
   const handleSend = async () => {
-    if (!query.trim() || isResponding) return;
+    if (!query.trim() || isResponding || isProcessing) return;
 
     if (query.length > 4000) {
       toast.warning("Message too long. Please limit to 4000 characters.");
@@ -105,7 +120,6 @@ const Chat = () => {
     }
 
     const ip = ipRef.current;
-
     const userMessage: Message = { role: "user", content: query };
     setMessages((prev) => [...prev, userMessage]);
     setQuery("");
@@ -119,6 +133,7 @@ const Chat = () => {
 
       if (!usage.data.isProUser && usage.data.messageCount >= MESSAGE_LIMIT) {
         toast.warning("You have reached the limit of 20 messages.");
+        setMessages((prev) => prev.slice(0, -1));
         return;
       }
 
@@ -127,6 +142,13 @@ const Chat = () => {
         history: messages,
         documentId: params.id,
       });
+
+      if (response.data.message === "Document not yet processed.") {
+        toast.warning("Document is still processing. Try again later.");
+        setMessages((prev) => prev.slice(0, -1));
+        return;
+      }
+
       const assistantMessage: Message = {
         role: "assistant",
         content: response.data.response,
@@ -140,6 +162,8 @@ const Chat = () => {
     } catch (err) {
       console.error("Error fetching response:", err);
       setError((err as Error).message || "Failed to get response");
+      setMessages((prev) => prev.slice(0, -1));
+      toast.error("Failed to get response.");
     } finally {
       setIsResponding(false);
     }
@@ -152,6 +176,7 @@ const Chat = () => {
         messages={messages}
         query={query}
         isResponding={isResponding}
+        isProcessing={isProcessing}
         onQueryChange={setQuery}
         onSend={handleSend}
       />

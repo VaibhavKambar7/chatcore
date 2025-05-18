@@ -5,12 +5,14 @@ import { useEffect, useRef } from "react";
 interface Message {
   role: "user" | "assistant";
   content: string;
+  isProcessing?: boolean;
 }
 
 interface ChatInterfaceProps {
   messages: Message[];
   query: string;
   isResponding: boolean;
+  isProcessing: boolean;
   onQueryChange: (query: string) => void;
   onSend: () => void;
 }
@@ -19,6 +21,7 @@ export function ChatInterface({
   messages,
   query,
   isResponding,
+  isProcessing,
   onQueryChange,
   onSend,
 }: ChatInterfaceProps) {
@@ -46,9 +49,16 @@ export function ChatInterface({
                   : "self-end bg-black text-white"
               }`}
             >
-              <div className="prose dark:prose-invert prose-lg w-full">
-                <ReactMarkdown>{message.content}</ReactMarkdown>
-              </div>
+              {message.isProcessing ? (
+                <div className="flex items-center">
+                  <PiSpinnerBold className="animate-spin text-xl mr-2 text-gray-600" />
+                  <span className="text-gray-600">{message.content}</span>
+                </div>
+              ) : (
+                <div className="prose dark:prose-invert prose-lg w-full">
+                  <ReactMarkdown>{message.content}</ReactMarkdown>
+                </div>
+              )}
             </div>
           ))}
           {isResponding && (
@@ -59,7 +69,9 @@ export function ChatInterface({
           )}
         </div>
       </div>
-      <div className="flex border border-black">
+      <div
+        className={`flex border ${isProcessing ? "border-gray-300" : "border-black"}`}
+      >
         <input
           type="text"
           value={query}
@@ -69,14 +81,18 @@ export function ChatInterface({
               onSend();
             }
           }}
-          disabled={isResponding}
-          className="flex-grow p-4 focus:outline-none"
-          placeholder="Ask anything about your PDF..."
+          disabled={isResponding || isProcessing}
+          className="flex-grow p-4 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+          placeholder={
+            isProcessing
+              ? "Processing PDF..."
+              : "Ask anything about your PDF..."
+          }
         />
         {query && (
           <button
             onClick={onSend}
-            disabled={isResponding}
+            disabled={isResponding || isProcessing}
             className="px-4 py-2 bg-black text-white font-semibold disabled:bg-gray-400"
           >
             Send

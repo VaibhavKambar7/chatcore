@@ -9,11 +9,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "ID is required" }, { status: 400 });
     }
 
-    const chatHistory = await prisma.document.findUnique({
+    const document = await prisma.document.findUnique({
       where: { slug: id },
+      select: {
+        chatHistory: true,
+        embeddingsGenerated: true,
+      },
     });
 
-    if (!chatHistory) {
+    if (!document) {
       return NextResponse.json(
         { message: "Document not found" },
         { status: 404 },
@@ -21,7 +25,7 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({
-      response: chatHistory,
+      response: document,
       status: 200,
     });
   } catch (error) {

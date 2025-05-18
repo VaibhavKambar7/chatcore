@@ -23,6 +23,7 @@ export async function POST(req: Request) {
       select: {
         objectKey: true,
         fileName: true,
+        embeddingsGenerated: true,
       },
     });
 
@@ -34,9 +35,22 @@ export async function POST(req: Request) {
       );
     }
 
+    if (document.embeddingsGenerated) {
+      console.log("Document already processed. Skipping.");
+      return NextResponse.json(
+        { message: "Document already processed." },
+        { status: 200 },
+      );
+    }
+
     const pdfBuffer = await getFileFromS3(document.objectKey);
 
     const { text, tokenCount } = await extractTextFromPDF(pdfBuffer);
+
+    await prisma.document.update({
+      where: { slug: id },
+      data: { extractedText: text },
+    });
 
     if (tokenCount > Number(MAX_TOKEN_THRESHOLD)) {
       const chunkOutputs = await chunkText(text, 1);

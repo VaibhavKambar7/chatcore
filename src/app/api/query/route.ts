@@ -35,18 +35,7 @@ export async function POST(req: Request) {
         history,
       );
     } else {
-      let text = document?.extractedText;
-
-      if (!text) {
-        const pdfBuffer = await getFileFromS3(document?.objectKey as string);
-        const result = await extractTextFromPDF(pdfBuffer);
-        text = result.text;
-
-        await prisma.document.update({
-          where: { slug: documentId },
-          data: { extractedText: text },
-        });
-      }
+      const text = document?.extractedText ?? "";
 
       llmResponse = await generatePureLLMResponse(query, text, history);
     }
