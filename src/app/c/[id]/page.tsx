@@ -24,6 +24,8 @@ const Chat = () => {
   const [isResponding, setIsResponding] = useState<boolean>(false);
   const [pdfUrl, setPdfUrl] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState<boolean>(true);
+  const [questions, setQuestions] = useState<string[]>([]);
+  const [showQuestions, setShowQuestions] = useState<boolean>(true);
 
   const { data } = useSession();
   const ipRef = useRef<string>("");
@@ -51,6 +53,7 @@ const Chat = () => {
           isProcessing: true,
         },
       ]);
+      setShowQuestions(true);
 
       try {
         const [documentResponse, pdfResponse] = await Promise.all([
@@ -63,17 +66,11 @@ const Chat = () => {
         if (chatHistory?.[0]) {
           setMessages(chatHistory);
           setIsProcessing(false);
+          setShowQuestions(false);
         } else {
           if (!embeddingsGenerated) {
             await handlePdf();
           }
-          setMessages([
-            {
-              role: "assistant",
-              content:
-                "Got it! Your PDF is ready for questions. What do you need to know?",
-            },
-          ]);
           setIsProcessing(false);
         }
 
@@ -104,6 +101,17 @@ const Chat = () => {
     setError("");
     try {
       await axios.post("/api/processDocument", { id: params.id });
+      const response = await axios.post("/api/getSummaryAndQuestions", {
+        id: params.id,
+      });
+      setMessages([
+        {
+          role: "assistant",
+          content: response.data.summary,
+        },
+      ]);
+      setQuestions(response.data.questions);
+      setShowQuestions(true);
     } catch (err) {
       console.error("Error processing document:", err);
       setError((err as Error).message);
@@ -111,7 +119,7 @@ const Chat = () => {
     }
   };
 
-  const handleSend = async () => {
+  const handleSend = async (query: string) => {
     if (!query.trim() || isResponding || isProcessing) return;
 
     if (query.length > 4000) {
@@ -179,6 +187,9 @@ const Chat = () => {
         isProcessing={isProcessing}
         onQueryChange={setQuery}
         onSend={handleSend}
+        questions={questions}
+        showQuestions={showQuestions}
+        setShowQuestions={setShowQuestions}
       />
     </div>
   );
