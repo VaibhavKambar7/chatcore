@@ -142,26 +142,81 @@ const Chat = () => {
       if (!usage.data.isProUser && usage.data.messageCount >= MESSAGE_LIMIT) {
         toast.warning("You have reached the limit of 20 messages.");
         setMessages((prev) => prev.slice(0, -1));
+        setIsResponding(false);
         return;
       }
 
-      const response = await axios.post("/api/query", {
-        query,
-        history: messages,
-        documentId: params.id,
+      const assistantPlaceholder: Message = {
+        role: "assistant",
+        content: "",
+      };
+
+      setMessages((prevMessages) => [...prevMessages, assistantPlaceholder]);
+
+      const response = await fetch("/api/query", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          query,
+          history: messages,
+          documentId: params.id,
+        }),
       });
 
-      if (response.data.message === "Document not yet processed.") {
-        toast.warning("Document is still processing. Try again later.");
-        setMessages((prev) => prev.slice(0, -1));
-        return;
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const assistantMessage: Message = {
-        role: "assistant",
-        content: response.data.response,
-      };
-      setMessages((prevMessages) => [...prevMessages, assistantMessage]);
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No reader available");
+
+      const decoder = new TextDecoder();
+      let streamedContent = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) {
+          break;
+        }
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split("\n\n");
+
+        for (const line of lines) {
+          if (line.startsWith("data:")) {
+            const data = line.slice(5).trim();
+
+            if (data === "[DONE]") {
+              continue;
+            }
+
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.chunk) {
+                streamedContent += parsed.chunk;
+                setMessages((prevMessages) => {
+                  const newMessages = [...prevMessages];
+                  if (newMessages.length > 0) {
+                    newMessages[newMessages.length - 1].content =
+                      streamedContent;
+                  }
+                  return newMessages;
+                });
+              }
+
+              if (parsed.error) {
+                console.error("Stream error:", parsed.error);
+                throw new Error(parsed.error);
+              }
+            } catch (e) {
+              console.error("Error parsing stream data:", e, data);
+            }
+          }
+        }
+      }
 
       await axios.post("/api/rate-limit/increment-message", {
         ip: ip,
@@ -170,7 +225,18 @@ const Chat = () => {
     } catch (err) {
       console.error("Error fetching response:", err);
       setError((err as Error).message || "Failed to get response");
-      setMessages((prev) => prev.slice(0, -1));
+
+      setMessages((prev) => {
+        if (
+          prev.length > 0 &&
+          prev[prev.length - 1].role === "assistant" &&
+          prev[prev.length - 1].content === ""
+        ) {
+          return prev.slice(0, -1);
+        }
+        return prev;
+      });
+
       toast.error("Failed to get response.");
     } finally {
       setIsResponding(false);

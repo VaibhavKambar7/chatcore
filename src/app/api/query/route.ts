@@ -1,11 +1,9 @@
 import prisma from "@/lib/prisma";
 import {
-  generateContextualLLMResponse,
-  generatePureLLMResponse,
+  generateContextualLLMResponseStream,
+  generatePureLLMResponseStream,
 } from "@/service/llmService";
-import { extractTextFromPDF } from "@/service/pdfService";
 import { queryDB } from "@/service/queryService";
-import { getFileFromS3 } from "@/service/s3Service";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
@@ -25,37 +23,71 @@ export async function POST(req: Request) {
       },
     });
 
-    let llmResponse;
-
-    if (document?.embeddingsGenerated) {
-      const context = await queryDB(query, documentId);
-      llmResponse = await generateContextualLLMResponse(
-        query,
-        context,
-        history,
+    if (!document) {
+      return NextResponse.json(
+        { message: "Document not found." },
+        { status: 404 },
       );
-    } else {
-      const text = document?.extractedText ?? "";
-
-      llmResponse = await generatePureLLMResponse(query, text, history);
     }
 
-    const chatHistory = document?.chatHistory || [];
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        let fullResponse = "";
 
-    const updatedHistory = [
-      ...chatHistory,
-      { role: "user", content: query },
-      { role: "assistant", content: llmResponse },
-    ].filter((item) => item !== null);
+        try {
+          const onChunk = (chunk: string) => {
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ chunk })}\n\n`),
+            );
+            fullResponse += chunk;
+          };
 
-    await prisma.document.update({
-      where: { slug: documentId },
-      data: { chatHistory: updatedHistory },
+          if (document.embeddingsGenerated) {
+            const context = await queryDB(query, documentId);
+            await generateContextualLLMResponseStream(
+              query,
+              context,
+              history,
+              onChunk,
+            );
+          } else {
+            const text = document.extractedText ?? "";
+            await generatePureLLMResponseStream(query, text, history, onChunk);
+          }
+
+          const chatHistory = document?.chatHistory ?? [];
+          const updatedHistory = [
+            ...chatHistory,
+            { role: "user", content: query },
+            { role: "assistant", content: fullResponse },
+          ].filter((item) => item !== null);
+
+          await prisma.document.update({
+            where: { slug: documentId },
+            data: { chatHistory: updatedHistory },
+          });
+
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        } catch (error) {
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({ error: "Stream error occurred" })}\n\n`,
+            ),
+          );
+          console.error("Streaming error:", error);
+        } finally {
+          controller.close();
+        }
+      },
     });
 
-    return NextResponse.json({
-      response: llmResponse,
-      status: 200,
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
     });
   } catch (error) {
     console.log("Error", error);

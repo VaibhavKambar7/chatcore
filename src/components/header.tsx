@@ -8,7 +8,7 @@ interface HeaderProps {
 }
 
 const Header = forwardRef<HTMLElement, HeaderProps>(
-  ({ featuresRef, faqRef, pricingRef }) => {
+  ({ featuresRef, faqRef, pricingRef }, ref) => {
     const scrollToSection = (ref: RefObject<HTMLElement>) => {
       if (ref.current) {
         ref.current.scrollIntoView({ behavior: "smooth" });
@@ -16,7 +16,7 @@ const Header = forwardRef<HTMLElement, HeaderProps>(
     };
 
     return (
-      <header className="border-b border-gray-100">
+      <header ref={ref} className="border-b border-gray-100">
         <div className="container mx-auto flex h-16 items-center justify-center px-4">
           <nav className="block">
             <ul className="flex space-x-8">

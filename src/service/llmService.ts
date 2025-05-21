@@ -9,64 +9,94 @@ import {
 
 dotenv.config();
 
-const model = new ChatGoogleGenerativeAI({
-  modelName: "gemini-2.0-flash-exp",
-  temperature: 0.7,
-  apiKey: process.env.GEMINI_API_KEY,
-});
-
-export const generatePureLLMResponse = async (
-  question: string,
-  extractedText: string,
-  history: Array<{ role: "user" | "assistant"; content: string }> = [],
-) => {
-  try {
-    const formattedHistory: BaseMessage[] = history.map((msg) =>
-      msg.role === "user" ? new HumanMessage(msg) : new AIMessage(msg),
-    );
-
-    const chain = textOnlyPrompt.pipe(model);
-    const response = await chain.invoke({
-      question: question,
-      extractedText: extractedText,
-      history: formattedHistory,
-    });
-
-    return response.content;
-  } catch (error) {
-    console.error("Error generating LLM response:", error);
-    return "An error occurred while generating the response.";
-  }
-};
-
-export const generateContextualLLMResponse = async (
+export async function generateContextualLLMResponseStream(
   question: string,
   context: string,
   history: Array<{ role: "user" | "assistant"; content: string }> = [],
-) => {
+  onChunk: (chunk: string) => void,
+) {
   try {
+    const model = new ChatGoogleGenerativeAI({
+      modelName: "gemini-2.0-flash-exp",
+      temperature: 0.7,
+      apiKey: process.env.GEMINI_API_KEY,
+      streaming: true,
+      callbacks: [
+        {
+          handleLLMNewToken(token) {
+            onChunk(token);
+          },
+        },
+      ],
+    });
+
     const formattedHistory: BaseMessage[] = history.map((msg) =>
-      msg.role === "user" ? new HumanMessage(msg) : new AIMessage(msg),
+      msg.role === "user"
+        ? new HumanMessage(msg.content)
+        : new AIMessage(msg.content),
     );
 
     const chain = contextualQueryPrompt.pipe(model);
-    const response = await chain.invoke({
+    await chain.invoke({
       question: question,
       context: context,
       history: formattedHistory,
     });
-
-    return response.content;
   } catch (error) {
-    console.error("Error generating LLM response:", error);
-    return "An error occurred while generating the response.";
+    console.error("Error generating streaming LLM response:", error);
+    throw error;
   }
-};
+}
+
+export async function generatePureLLMResponseStream(
+  question: string,
+  extractedText: string,
+  history: Array<{ role: "user" | "assistant"; content: string }> = [],
+  onChunk: (chunk: string) => void,
+) {
+  try {
+    const model = new ChatGoogleGenerativeAI({
+      modelName: "gemini-2.0-flash-exp",
+      temperature: 0.7,
+      apiKey: process.env.GEMINI_API_KEY,
+      streaming: true,
+      callbacks: [
+        {
+          handleLLMNewToken(token) {
+            onChunk(token);
+          },
+        },
+      ],
+    });
+
+    const formattedHistory: BaseMessage[] = history.map((msg) =>
+      msg.role === "user"
+        ? new HumanMessage(msg.content)
+        : new AIMessage(msg.content),
+    );
+
+    const chain = textOnlyPrompt.pipe(model);
+    await chain.invoke({
+      question: question,
+      extractedText: extractedText,
+      history: formattedHistory,
+    });
+  } catch (error) {
+    console.error("Error generating streaming LLM response:", error);
+    throw error;
+  }
+}
 
 export const generateSummaryAndQuestions = async (
   text: string,
 ): Promise<{ summary: string; questions: string[] }> => {
   try {
+    const model = new ChatGoogleGenerativeAI({
+      modelName: "gemini-2.0-flash-exp",
+      temperature: 0.7,
+      apiKey: process.env.GEMINI_API_KEY,
+    });
+
     const chain = generateSummaryAndQuestionsPrompt.pipe(model);
     const response = await chain.invoke({
       text: text.substring(0, 15000),

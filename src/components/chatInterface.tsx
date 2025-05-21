@@ -1,6 +1,5 @@
-import { PiSpinnerBold } from "react-icons/pi";
-import ReactMarkdown from "react-markdown";
 import { useEffect, useRef } from "react";
+import ReactMarkdown from "react-markdown";
 
 interface Message {
   role: "user" | "assistant";
@@ -63,14 +62,28 @@ export function ChatInterface({
                 }`}
               >
                 <div>
-                  {message.isProcessing ? (
-                    <div className="flex items-center">
-                      <PiSpinnerBold className="animate-spin text-xl mr-2 text-gray-600" />
-                      <span className="text-gray-600">{message.content}</span>
-                    </div>
+                  {message.role === "assistant" ? (
+                    <>
+                      <div className="prose dark:prose-invert prose-lg w-full">
+                        <div className="flex items-center gap-2">
+                          {isProcessing &&
+                            message === messages[messages.length - 1] && (
+                              <div className="w-2 h-2 bg-gray-600 rounded-full animate-growRotate"></div>
+                            )}
+                          <div className="flex-grow">
+                            <ReactMarkdown>{message.content}</ReactMarkdown>
+                          </div>
+                        </div>
+
+                        {isResponding &&
+                          message === messages[messages.length - 1] && (
+                            <div className="w-2 h-2 bg-gray-600 rounded-full animate-growRotate" />
+                          )}
+                      </div>
+                    </>
                   ) : (
                     <div className="prose dark:prose-invert prose-lg w-full">
-                      <ReactMarkdown>{message.content}</ReactMarkdown>
+                      <span>{message.content}</span>
                     </div>
                   )}
                 </div>
@@ -99,12 +112,6 @@ export function ChatInterface({
                 )}
             </div>
           ))}
-          {isResponding && (
-            <div className="self-start max-w-[80%] p-3 flex flex-row justify-center items-center bg-gray-100 border-1 border-gray-500">
-              <PiSpinnerBold className="animate-spin text-xl inline-block text-gray-600 mr-2" />
-              <div className="text-gray-600">Thinking...</div>
-            </div>
-          )}
         </div>
       </div>
       <div
@@ -123,7 +130,7 @@ export function ChatInterface({
           className="flex-grow p-4 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
           placeholder={
             isProcessing
-              ? "Processing PDF..."
+              ? "Processing your PDF..."
               : "Ask anything about your PDF..."
           }
         />

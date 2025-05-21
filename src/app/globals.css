@@ -207,7 +207,26 @@ select::-webkit-scrollbar-track:horizontal {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+}
+
+@keyframes growRotate {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+
+  50% {
+    transform: scale(1.5) rotate(180deg);
+  }
+
+  100% {
+    transform: scale(1) rotate(360deg);
+  }
+}
+
+.animate-growRotate {
+  animation: growRotate 1.5s ease-in-out infinite;
 }
