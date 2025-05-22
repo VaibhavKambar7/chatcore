@@ -26,9 +26,29 @@ const HowItWorks: React.FC = () => {
     },
   };
 
+  const steps = [
+    {
+      title: "Upload Your PDF",
+      description:
+        "Simply drag and drop your PDF file or browse to upload it securely.",
+      icon: <FileText className="h-6 w-6 text-black" />,
+    },
+    {
+      title: "Ask Questions",
+      description:
+        "Use natural language to ask any question about the content of your PDF.",
+      icon: <MessageSquare className="h-6 w-6 text-black" />,
+    },
+    {
+      title: "Get Instant Answers",
+      description: "Receive accurate, AI-powered responses in seconds.",
+      icon: <BookOpen className="h-6 w-6 text-black" />,
+    },
+  ];
+
   return (
     <motion.section
-      className="py-24"
+      className="py-24 bg-gray-50"
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, amount: 0.3 }}
@@ -39,46 +59,23 @@ const HowItWorks: React.FC = () => {
           How It Works
         </h3>
         <div className="grid gap-8 md:grid-cols-3">
-          <motion.div
-            variants={childVariants}
-            className="rounded-none bg-white p-6 shadow-sm"
-          >
-            <div className="mb-4 rounded-full bg-gray-100 p-3 inline-block">
-              <FileText className="h-6 w-6 text-black" />
-            </div>
-            <h4 className="mb-2 text-xl font-semibold">1. Upload Your PDF</h4>
-            <p className="text-gray-600">
-              Simply drag and drop your PDF file or browse to upload it
-              securely.
-            </p>
-          </motion.div>
-          <motion.div
-            variants={childVariants}
-            className="rounded-none bg-white p-6 shadow-sm"
-          >
-            <div className="mb-4 rounded-full bg-gray-100 p-3 inline-block">
-              <MessageSquare className="h-6 w-6 text-black" />
-            </div>
-            <h4 className="mb-2 text-xl font-semibold">2. Ask Questions</h4>
-            <p className="text-gray-600">
-              Use natural language to ask any question about the content of your
-              PDF.
-            </p>
-          </motion.div>
-          <motion.div
-            variants={childVariants}
-            className="rounded-none bg-white p-6 shadow-sm"
-          >
-            <div className="mb-4 rounded-full bg-gray-100 p-3 inline-block">
-              <BookOpen className="h-6 w-6 text-black" />
-            </div>
-            <h4 className="mb-2 text-xl font-semibold">
-              3. Get Instant Answers
-            </h4>
-            <p className="text-gray-600">
-              Receive accurate, AI-powered responses in seconds.
-            </p>
-          </motion.div>
+          {steps.map((step, index) => (
+            <motion.div
+              key={index}
+              variants={childVariants}
+              className="relative bg-white p-6 shadow-sm"
+            >
+              <div className="absolute -top-4 -left-4 w-10 h-10 rounded-full bg-black text-white flex items-center justify-center font-bold text-lg">
+                {index + 1}
+              </div>
+
+              <div className="mb-4 rounded-full bg-gray-100 p-3 inline-block">
+                {step.icon}
+              </div>
+              <h4 className="mb-2 text-xl font-semibold">{step.title}</h4>
+              <p className="text-gray-600">{step.description}</p>
+            </motion.div>
+          ))}
         </div>
       </div>
     </motion.section>
