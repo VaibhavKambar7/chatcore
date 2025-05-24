@@ -1,4 +1,10 @@
+import { useState, useEffect, useRef } from "react";
 import { PiSpinnerBold } from "react-icons/pi";
+import { Document, Page, pdfjs } from "react-pdf";
+import "react-pdf/dist/esm/Page/AnnotationLayer.css";
+import "react-pdf/dist/esm/Page/TextLayer.css";
+
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface PDFViewerProps {
   loading: boolean;
@@ -7,23 +13,206 @@ interface PDFViewerProps {
 }
 
 export function PDFViewer({ loading, error, pdfUrl }: PDFViewerProps) {
+  const [numPages, setNumPages] = useState<number | null>(null);
+  const [scale, setScale] = useState<number>(1.0);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [viewerError, setViewerError] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  useEffect(() => {
+    setNumPages(null);
+    setViewerError(null);
+    setCurrentPage(1);
+  }, [pdfUrl]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!containerRef.current || !numPages) return;
+
+      const container = containerRef.current;
+      const containerCenter = container.scrollTop + container.clientHeight / 2;
+
+      let closestPage = 1;
+      let closestDistance = Infinity;
+
+      pageRefs.current.forEach((pageRef, index) => {
+        if (pageRef) {
+          const pageCenter = pageRef.offsetTop + pageRef.offsetHeight / 2;
+          const distance = Math.abs(pageCenter - containerCenter);
+          if (distance < closestDistance) {
+            closestDistance = distance;
+            closestPage = index + 1;
+          }
+        }
+      });
+
+      setCurrentPage(closestPage);
+    };
+
+    const container = containerRef.current;
+    container?.addEventListener("scroll", handleScroll);
+    return () => container?.removeEventListener("scroll", handleScroll);
+  }, [numPages]);
+
+  function onDocumentLoadSuccess({ numPages: total }: { numPages: number }) {
+    setNumPages(total);
+    pageRefs.current = new Array(total).fill(null);
+  }
+
+  function onDocumentLoadError(err: Error) {
+    const isWorkerError = err.message.includes("worker");
+    const msg = isWorkerError
+      ? `Failed to load PDF worker. Ensure 'pdf.worker.min.js' is set. Error: ${err.message}`
+      : `Failed to load PDF. ${err.message || "Try another file."}`;
+    setViewerError(msg);
+  }
+
+  function zoomIn() {
+    setScale((prev) => Math.min(prev + 0.2, 3.0));
+  }
+
+  function zoomOut() {
+    setScale((prev) => Math.max(prev - 0.2, 0.5));
+  }
+
+  function goToPage(pageNum: number) {
+    const pageRef = pageRefs.current[pageNum - 1];
+    pageRef?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  const displayError = error || viewerError;
+
   return (
-    <div className="w-1/2 h-full bg-gray-100 relative">
-      {loading ? (
-        <div className="flex items-center justify-center h-full">
-          <PiSpinnerBold className="animate-spin text-4xl text-black" />
-        </div>
-      ) : error ? (
-        <div className="flex items-center justify-center h-full text-red-500">
-          {error}
-        </div>
-      ) : pdfUrl ? (
-        <iframe src={pdfUrl} className="w-full h-full" title="PDF Viewer" />
-      ) : (
-        <div className="flex items-center justify-center h-full text-gray-500">
-          No PDF loaded
+    <div className="w-1/2 max-w-3xl mx-auto h-screen bg-white flex flex-col shadow-xl border border-gray-200 overflow-hidden">
+      {pdfUrl && !displayError && !loading && numPages && (
+        <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-sm">
+          <div className="flex items-center space-x-4 text-gray-700">
+            <span className="text-sm font-medium">Page</span>
+            <span className="bg-white text-black border border-black px-2 py-1 rounded-md text-sm font-semibold">
+              {currentPage}
+            </span>
+            <span className="text-sm text-gray-500">of {numPages}</span>
+          </div>
+
+          <div className="flex items-center space-x-2 bg-gray-50 rounded-lg p-1">
+            <button
+              onClick={zoomOut}
+              disabled={scale <= 0.5}
+              className="p-2 rounded-md hover:bg-gray-100 disabled:opacity-50 transition-colors text-gray-600"
+              aria-label="Zoom Out"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M20 12H4"
+                />
+              </svg>
+            </button>
+            <span className="text-sm font-medium text-gray-700 w-12 text-center">
+              {(scale * 100).toFixed(0)}%
+            </span>
+            <button
+              onClick={zoomIn}
+              disabled={scale >= 3.0}
+              className="p-2 rounded-md hover:bg-gray-100 disabled:opacity-50 transition-colors text-gray-600"
+              aria-label="Zoom In"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
       )}
+
+      <div
+        ref={containerRef}
+        className="flex-1 overflow-auto bg-gray-50 p-6"
+        style={{ scrollBehavior: "smooth" }}
+      >
+        {loading ? (
+          <div className="flex flex-col items-center justify-center h-full text-gray-500">
+            <PiSpinnerBold className="animate-spin text-4xl text-black" />
+          </div>
+        ) : displayError ? (
+          <div className="flex flex-col items-center justify-center h-full text-red-500 p-8 text-center">
+            <div className="bg-red-50 rounded-full p-4 mb-4">
+              <svg
+                className="w-8 h-8 text-red-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Unable to Load PDF</h3>
+            <p className="text-gray-600 max-w-md">{displayError}</p>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center space-y-8">
+            <Document
+              file={pdfUrl}
+              onLoadSuccess={onDocumentLoadSuccess}
+              onLoadError={onDocumentLoadError}
+              loading={
+                <div className="flex flex-col items-center justify-center py-16 text-gray-500">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-4"></div>
+                  <p className="font-medium">Preparing document...</p>
+                </div>
+              }
+              error={
+                <div className="text-red-500 text-center py-16">
+                  <p>Error initializing PDF viewer.</p>
+                </div>
+              }
+            >
+              {numPages &&
+                Array.from({ length: numPages }, (_, index) => (
+                  <div
+                    key={`page_${index + 1}`}
+                    className="mb-8 bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200"
+                  >
+                    <div className="p-4 flex justify-center">
+                      <Page
+                        pageNumber={index + 1}
+                        scale={scale}
+                        renderTextLayer
+                        renderAnnotationLayer
+                        onRenderError={() =>
+                          setViewerError("Error rendering PDF page.")
+                        }
+                      />
+                    </div>
+                  </div>
+                ))}
+            </Document>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

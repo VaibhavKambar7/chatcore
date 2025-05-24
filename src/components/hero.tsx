@@ -54,7 +54,7 @@ const Hero: React.FC<HeroProps> = ({ setPdfUrl }) => {
         </motion.p>
         <motion.div
           variants={childVariants}
-          className="mx-auto max-w-3xl rounded-none border-2 border-dashed border-gray-200 bg-gray-50 p-8"
+          className="mx-auto max-w-3xl rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 p-8"
         >
           <FileUpload setPdfUrl={(url) => setPdfUrl(url as string)} />
         </motion.div>

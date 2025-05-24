@@ -48,27 +48,27 @@ export function ChatInterface({
   return (
     <div className="w-1/2 h-full flex flex-col">
       <div
-        className="flex-grow overflow-y-auto p-4 scrollbar-hide"
+        className="flex-grow overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
         ref={scrollRef}
       >
-        <div className="p-4 flex flex-col gap-4">
+        <div className="flex flex-col gap-4">
           {messages.map((message, index) => (
             <div key={index} className="flex flex-col">
               <div
-                className={`max-w-[80%] p-3 inline-block text-grey-100 border-1 border-gray-500 ${
+                className={`max-w-[80%] p-4 rounded-2xl transition-all duration-200 ${
                   message.role === "assistant"
-                    ? "self-start bg-gray-100 text-black"
-                    : "self-end bg-black text-white"
+                    ? "self-start bg-gray-50 border border-gray-300 text-gray-800"
+                    : "self-end bg-[#F2F2F2] border border-gray-300 text-gray-800"
                 }`}
               >
                 <div>
                   {message.role === "assistant" ? (
                     <>
-                      <div className="prose dark:prose-invert prose-lg w-full">
+                      <div className="prose prose-md w-full">
                         <div className="flex items-center gap-2">
                           {isProcessing &&
                             message === messages[messages.length - 1] && (
-                              <div className="w-2 h-2 bg-gray-600 rounded-full animate-growRotate"></div>
+                              <div className="w-2 h-2 bg-gray-600 rounded-md animate-growRotate"></div>
                             )}
                           <div className="flex-grow">
                             <ReactMarkdown>{message.content}</ReactMarkdown>
@@ -77,12 +77,12 @@ export function ChatInterface({
 
                         {isResponding &&
                           message === messages[messages.length - 1] && (
-                            <div className="w-2 h-2 bg-gray-600 rounded-full animate-growRotate" />
+                            <div className="w-2 h-2 bg-gray-600 rounded-md animate-growRotate" />
                           )}
                       </div>
                     </>
                   ) : (
-                    <div className="prose dark:prose-invert prose-lg w-full">
+                    <div className="prose prose-md w-full">
                       <span>{message.content}</span>
                     </div>
                   )}
@@ -92,18 +92,20 @@ export function ChatInterface({
                 index === 0 &&
                 questions.length > 0 &&
                 showQuestions && (
-                  <div className="max-w-[80%] self-start bg-gray-50 p-2 rounded-none mt-2 border-1 border-gray-300">
-                    <h3 className="text-sm font-semibold mb-1">
+                  <div className="max-w-[80%] self-start bg-white p-4 rounded-2xl mt-3 border border-gray-200">
+                    <h3 className="text-sm font-semibold text-gray-700 mb-2">
                       Suggested Questions:
                     </h3>
-                    <ul className="space-y-1">
+                    <ul className="space-y-2">
                       {questions.map((question, qIndex) => (
                         <li
                           key={qIndex}
                           onClick={() => handleQuestion(question)}
-                          className="bg-gray-200 p-2 rounded-none hover:bg-gray-300 hover:text-black hover:cursor-pointer"
+                          className="bg-gray-100 p-3 text-sm rounded-lg hover:bg-gray-200 hover:text-gray-800 hover:cursor-pointer transition-colors duration-200"
                         >
-                          <span className="font-medium">Q{qIndex + 1}. </span>
+                          <span className="font-medium text-gray-600">
+                            Q{qIndex + 1}.
+                          </span>{" "}
                           {question}
                         </li>
                       ))}
@@ -115,7 +117,7 @@ export function ChatInterface({
         </div>
       </div>
       <div
-        className={`flex border ${isProcessing ? "border-gray-300" : "border-black"}`}
+        className={`flex border ${isProcessing ? "border-gray-300" : "border-gray-400"}`}
       >
         <input
           type="text"

@@ -48,7 +48,7 @@ const HowItWorks: React.FC = () => {
 
   return (
     <motion.section
-      className="py-24 bg-gray-50"
+      className="py-24 bg-fabric-light"
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, amount: 0.3 }}

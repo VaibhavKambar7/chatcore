@@ -230,3 +230,9 @@ select::-webkit-scrollbar-track:horizontal {
 .animate-growRotate {
   animation: growRotate 1.5s ease-in-out infinite;
 }
+
+.bg-fabric-light {
+  background-color: #ffffff;
+  background-image: url("https://www.transparenttextures.com/patterns/45-degree-fabric-light.png");
+  background-repeat: repeat;
+}

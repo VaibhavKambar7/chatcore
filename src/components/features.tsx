@@ -29,7 +29,7 @@ const Features = forwardRef<HTMLElement>((props, ref) => {
   return (
     <motion.section
       ref={ref}
-      className="bg-gray-50 py-24"
+      className="py-24 bg-fabric-light"
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, amount: 0.3 }}

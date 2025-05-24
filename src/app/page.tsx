@@ -36,7 +36,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="flex min-h-screen flex-col bg-white">
+    <div className="flex min-h-screen flex-col bg-fabric-light">
       <div className="flex relative">
         {!isSidebarOpen && (
           <div className="fixed left-0 top-0 h-full w-14 bg-gray-100 border-r-black border-1 z-40">

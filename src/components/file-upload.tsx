@@ -140,7 +140,7 @@ export function FileUpload({ setPdfUrl }: FileUploadProps) {
 
   return (
     <div
-      className={`w-full max-w-3xl relative bg-white flex flex-col items-center justify-center text-center gap-5 border-2 border-dotted border-gray-400/40
+      className={`w-full max-w-3xl relative bg-white flex flex-col items-center justify-center text-center gap-5 border-2 rounded-md border-dotted border-gray-400/40
               p-20 shadow-[0_8px_30px_-8px_rgba(0,0,0,0.1)]
               transition-all duration-200 ease-in-out ${
                 isDragging ? "bg-gray-100" : ""
