@@ -7,7 +7,7 @@ import { PiSpinnerBold } from "react-icons/pi";
 import { FiChevronDown } from "react-icons/fi";
 import Link from "next/link";
 import { GoSidebarCollapse } from "react-icons/go";
-import { useSession, signIn, signOut } from "next-auth/react";
+import { useSession, signIn } from "next-auth/react";
 import { IoSparkles } from "react-icons/io5";
 import ProfileModal from "./profile-modal";
 import UpgradeModal from "./upgrade-modal";
@@ -231,7 +231,9 @@ export default function Sidebar({
                 className="text-xl cursor-pointer"
                 onClick={() => setIsSidebarOpen(false)}
               />
-              <div className="text-xl font-bold">Chatcore</div>
+              <a className="text-xl font-bold" href={"/"}>
+                Chatcore
+              </a>
             </div>
 
             <div className="px-4 pb-4 bg-gray-100">

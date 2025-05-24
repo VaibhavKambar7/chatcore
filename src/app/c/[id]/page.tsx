@@ -26,6 +26,7 @@ const Chat = () => {
   const [isProcessing, setIsProcessing] = useState<boolean>(true);
   const [questions, setQuestions] = useState<string[]>([]);
   const [showQuestions, setShowQuestions] = useState<boolean>(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const { data } = useSession();
   const ipRef = useRef<string>("");
@@ -245,7 +246,14 @@ const Chat = () => {
 
   return (
     <div className="flex h-screen bg-white">
-      <PDFViewer loading={loading} error={error} pdfUrl={pdfUrl} />
+      <PDFViewer
+        loading={loading}
+        error={error}
+        pdfUrl={pdfUrl}
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
+        ip={ipRef.current}
+      />
       <ChatInterface
         messages={messages}
         query={query}
