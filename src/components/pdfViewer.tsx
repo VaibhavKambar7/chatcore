@@ -230,9 +230,8 @@ export function PDFViewer({
                 onLoadSuccess={onDocumentLoadSuccess}
                 onLoadError={onDocumentLoadError}
                 loading={
-                  <div className="flex flex-col items-center justify-center py-16 text-gray-500">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-4"></div>
-                    <p className="font-medium">Preparing document...</p>
+                  <div className="flex flex-col items-center justify-center h-full text-gray-500">
+                    <PiSpinnerBold className="animate-spin text-4xl text-black mb-4" />
                   </div>
                 }
                 error={
