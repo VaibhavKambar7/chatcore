@@ -49,9 +49,16 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.HOST }} >> ~/.ssh/known_hosts
 
-      - name: Rsync built files to EC2
+      - name: Clean EC2 and rsync built files
         run: |
-          rsync -avz -e "ssh -i ~/.ssh/id_rsa" ./.next/ ${{ secrets.USERNAME }}@${{ secrets.HOST }}:${{ secrets.DEPLOY_PATH }}/.next/
+          # Clean old build on EC2 first
+          ssh -i ~/.ssh/id_rsa ${{ secrets.USERNAME }}@${{ secrets.HOST }} << 'EOF'
+            cd ${{ secrets.DEPLOY_PATH }}
+            rm -rf .next/cache
+            rm -rf .next/static
+          EOF
+          # Then sync new build (excluding cache)
+          rsync -avz -e "ssh -i ~/.ssh/id_rsa" --exclude='cache' --delete ./.next/ ${{ secrets.USERNAME }}@${{ secrets.HOST }}:${{ secrets.DEPLOY_PATH }}/.next/
 
       - name: Rsync other necessary files to EC2
         run: |
