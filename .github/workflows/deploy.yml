@@ -51,16 +51,16 @@ jobs:
 
       - name: Rsync built files to EC2
         run: |
-          rsync -avz -e "ssh -i ~/.ssh/id_rsa" --exclude='cache' ./.next/ ${{ secrets.USERNAME }}@${{ secrets.HOST }}:${{ secrets.DEPLOY_PATH }}/.next/
+          rsync -avz -e "ssh -i ~/.ssh/id_rsa" --exclude='cache' ./.next/ ${{ secrets.USERNAME }}@${{ secrets.HOST }}:~/app/.next/
 
       - name: Rsync other necessary files to EC2
         run: |
-          rsync -avz -e "ssh -i ~/.ssh/id_rsa" package.json package-lock.json ecosystem.config.js ${{ secrets.USERNAME }}@${{ secrets.HOST }}:${{ secrets.DEPLOY_PATH }}/
+          rsync -avz -e "ssh -i ~/.ssh/id_rsa" package.json package-lock.json ecosystem.config.js ${{ secrets.USERNAME }}@${{ secrets.HOST }}:~/app/
 
       - name: Install production dependencies and restart with PM2
         run: |
           ssh -i ~/.ssh/id_rsa ${{ secrets.USERNAME }}@${{ secrets.HOST }} << 'EOF'
-            cd ${{ secrets.DEPLOY_PATH }}
+            cd ~/app
             npm install --production --ignore-scripts
             pm2 restart all || pm2 start ecosystem.config.js
           EOF
