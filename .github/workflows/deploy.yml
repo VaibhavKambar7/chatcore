@@ -13,6 +13,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "23.11.0"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build project
+        run: npm run build
+
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
@@ -20,14 +31,18 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.HOST }} >> ~/.ssh/known_hosts
 
-      - name: Rsync files to EC2
+      - name: Rsync built files to EC2
         run: |
-          rsync -avz --delete -e "ssh -i ~/.ssh/id_rsa" ./ ${{ secrets.USERNAME }}@${{ secrets.HOST }}:${{ secrets.DEPLOY_PATH }}
+          rsync -avz -e "ssh -i ~/.ssh/id_rsa" ./build/ ${{ secrets.USERNAME }}@${{ secrets.HOST }}:${{ secrets.DEPLOY_PATH }}/build/
 
-      - name: Install deps and restart app
+      - name: Rsync other necessary files to EC2
+        run: |
+          rsync -avz -e "ssh -i ~/.ssh/id_rsa" package.json package-lock.json ecosystem.config.js ${{ secrets.USERNAME }}@${{ secrets.HOST }}:${{ secrets.DEPLOY_PATH }}/
+
+      - name: Install dependencies and restart app on EC2
         run: |
           ssh -i ~/.ssh/id_rsa ${{ secrets.USERNAME }}@${{ secrets.HOST }} << 'EOF'
             cd ${{ secrets.DEPLOY_PATH }}
-            npm install
-            pm2 restart all || pm2 start npm --name "my-app" -- start
+            npm install --production
+            pm2 restart all || pm2 start ecosystem.config.js
           EOF
