@@ -62,5 +62,7 @@ jobs:
           ssh -i ~/.ssh/id_rsa ${{ secrets.USERNAME }}@${{ secrets.HOST }} << 'EOF'
             cd ~/app
             npm install --production --ignore-scripts
+            npm install concurrently tsx --save
+            npx prisma generate
             pm2 restart all || pm2 start ecosystem.config.js
           EOF
