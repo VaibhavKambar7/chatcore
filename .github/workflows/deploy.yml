@@ -49,20 +49,47 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.HOST }} >> ~/.ssh/known_hosts
 
-      - name: Rsync built files to EC2
+      - name: Rsync built files and config to EC2
         run: |
           rsync -avz -e "ssh -i ~/.ssh/id_rsa" --exclude='cache' ./.next/ ${{ secrets.USERNAME }}@${{ secrets.HOST }}:~/app/.next/
-
-      - name: Rsync other necessary files to EC2
-        run: |
           rsync -avz -e "ssh -i ~/.ssh/id_rsa" package.json package-lock.json ecosystem.config.js ${{ secrets.USERNAME }}@${{ secrets.HOST }}:~/app/
 
-      - name: Install production dependencies and restart with PM2
+      - name: Install system dependencies for 'sharp' on EC2
+        run: |
+          ssh -i ~/.ssh/id_rsa ${{ secrets.USERNAME }}@${{ secrets.HOST }} << 'EOF'
+            sudo apt-get update
+            sudo apt-get install -y libvips-dev || true
+          EOF
+
+      - name: Install production dependencies, generate Prisma client, and restart with PM2
         run: |
           ssh -i ~/.ssh/id_rsa ${{ secrets.USERNAME }}@${{ secrets.HOST }} << 'EOF'
             cd ~/app
+            
             npm install --production --ignore-scripts
-            npm install concurrently tsx --save
+            npm install concurrently tsx --save 
+            
+            npm install --platform=linux --arch=x64 sharp
+            
             npx prisma generate
-            pm2 restart all || pm2 start ecosystem.config.js
+            
+            export GEMINI_API_KEY="${{ secrets.GEMINI_API_KEY }}"
+            export PINECONE_API_KEY="${{ secrets.PINECONE_API_KEY }}"
+            export PINECONE_ENVIRONMENT="${{ secrets.PINECONE_ENVIRONMENT }}"
+            export PINECONE_INDEX_NAME="${{ secrets.PINECONE_INDEX_NAME }}"
+            export AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}"
+            export AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+            export AWS_BUCKET_REGION="${{ secrets.AWS_BUCKET_REGION }}"
+            export BUCKET_NAME="${{ secrets.BUCKET_NAME }}"
+            export AWS_SDK_LOAD_CONFIG="${{ secrets.AWS_SDK_LOAD_CONFIG }}"
+            export DATABASE_URL="${{ secrets.DATABASE_URL }}"
+            export DIRECT_URL="${{ secrets.DIRECT_URL }}"
+            export LLAMA_CLOUD_API_KEY="${{ secrets.LLAMA_CLOUD_API_KEY }}"
+            export GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}"
+            export GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}"
+            export NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}"
+            export NEXTAUTH_URL="${{ secrets.NEXTAUTH_URL }}"
+            export STRIPE_SECRET_KEY="${{ secrets.STRIPE_SECRET_KEY }}"
+            
+            pm2 restart ecosystem.config.js --env production || pm2 start ecosystem.config.js --env production
           EOF
