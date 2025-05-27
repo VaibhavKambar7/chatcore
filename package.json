@@ -7,7 +7,7 @@
     "cron": "tsx cron/resetUsage.ts",
     "build": "next build",
     "start": "next start",
-    "start:cron": "concurrently --kill-others 'next start' 'tsx cron/resetUsage.ts'",
+    "cron:run": "tsx cron/resetUsage.ts",
     "lint": "next lint",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

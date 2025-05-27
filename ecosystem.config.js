@@ -33,7 +33,7 @@ module.exports = {
     {
       name: "chatcore-cron",
       script: "npm",
-      args: "run start:cron",
+      args: "run cron:run",
       instances: 1,
       exec_mode: "fork",
       watch: false,
