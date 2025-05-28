@@ -128,8 +128,6 @@ const Chat = () => {
       const decoder = new TextDecoder();
       let streamedSummary = "";
 
-      console.log("Starting to read stream...");
-
       setMessages((prevMessages) => {
         const newMessages = [...prevMessages];
         if (!newMessages.some((msg) => msg.isProcessing)) {
@@ -145,25 +143,19 @@ const Chat = () => {
       while (true) {
         const { done, value } = await reader.read();
 
-        console.log("Read chunk:", { done, valueLength: value?.length });
-
         if (done) {
-          console.log("Stream completed");
           break;
         }
 
         const chunk = decoder.decode(value, { stream: true });
-        console.log("Decoded chunk:", chunk);
 
         const lines = chunk.split("\n\n");
 
         for (const line of lines) {
           if (line.startsWith("data:")) {
             const data = line.slice(5).trim();
-            console.log("Processing data:", data);
 
             if (data === "[DONE]") {
-              console.log("Received [DONE] signal");
               setMessages((prevMessages) => {
                 const newMessages = [...prevMessages];
                 const lastMessageIndex = newMessages.length - 1;
@@ -183,11 +175,9 @@ const Chat = () => {
 
             try {
               const parsed = JSON.parse(data);
-              console.log("Parsed data:", parsed);
 
               if (parsed.summaryChunk) {
                 streamedSummary += parsed.summaryChunk;
-                console.log("Updated summary length:", streamedSummary.length);
 
                 setMessages((prevMessages) => {
                   const newMessages = [...prevMessages];
@@ -207,7 +197,6 @@ const Chat = () => {
               }
 
               if (parsed.questions && Array.isArray(parsed.questions)) {
-                console.log("Received questions:", parsed.questions);
                 setQuestions(parsed.questions);
               }
 
@@ -226,7 +215,6 @@ const Chat = () => {
         }
       }
 
-      console.log("Final streamed summary:", streamedSummary);
       setShowQuestions(true);
     } catch (err) {
       console.error("Error processing document:", err);

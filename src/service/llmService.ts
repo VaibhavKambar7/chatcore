@@ -119,9 +119,6 @@ export const generateSummaryOnly = async (
       text: text.substring(0, 15000),
     });
 
-    console.log(`Final summary length: ${fullSummary.length}`);
-    console.log(`Total tokens received: ${tokenCount}`);
-
     return fullSummary;
   } catch (error) {
     console.error("Error generating summary:", error);

@@ -56,14 +56,14 @@ export function ChatInterface({
           {messages.map((message, index) => (
             <div key={index} className="flex flex-col">
               <div
-                className={`max-w-[80%] p-4 rounded-2xl transition-all duration-200 relative group ${
+                className={`${message.role === "assistant" ? "max-w-[90%]" : "max-w-[80%]"} p-4 rounded-2xl transition-all duration-200 relative group ${
                   message.role === "assistant"
                     ? "self-start bg-gray-50 border border-gray-300 text-gray-800"
                     : "self-end bg-[#F2F2F2] border border-gray-300 text-gray-800"
                 }`}
               >
                 {message.role === "assistant" ? (
-                  <div className="prose prose-md w-full">
+                  <div className="prose prose-md w-full prose-custom">
                     <ReactMarkdown>{message.content}</ReactMarkdown>
                     {isResponding &&
                       message === messages[messages.length - 1] && (
