@@ -49,9 +49,29 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.HOST }} >> ~/.ssh/known_hosts
 
+      - name: Clean up old deployment and free space
+        run: |
+          ssh -i ~/.ssh/id_rsa ${{ secrets.USERNAME }}@${{ secrets.HOST }} << 'EOF'
+            # Stop PM2 processes
+            pm2 stop all || true
+            
+            # Clean up space
+            sudo apt clean
+            sudo apt autoremove -y
+            npm cache clean --force || true
+            rm -rf ~/.npm/_logs/* || true
+            pm2 flush || true
+            
+            # Remove old build
+            rm -rf ~/app/.next/* || true
+            
+            # Check disk space
+            df -h
+          EOF
+
       - name: Rsync built files and config to EC2
         run: |
-          rsync -avz -e "ssh -i ~/.ssh/id_rsa" --exclude='cache' ./.next/ ${{ secrets.USERNAME }}@${{ secrets.HOST }}:~/app/.next/
+          rsync -avz -e "ssh -i ~/.ssh/id_rsa" --exclude='cache' --exclude='*.map' ./.next/ ${{ secrets.USERNAME }}@${{ secrets.HOST }}:~/app/.next/
           rsync -avz -e "ssh -i ~/.ssh/id_rsa" package.json package-lock.json ecosystem.config.js ${{ secrets.USERNAME }}@${{ secrets.HOST }}:~/app/
 
       - name: Install system dependencies for 'sharp' on EC2
@@ -66,13 +86,16 @@ jobs:
           ssh -i ~/.ssh/id_rsa ${{ secrets.USERNAME }}@${{ secrets.HOST }} << 'EOF'
             cd ~/app
             
-            npm install --production --ignore-scripts
-            npm install concurrently tsx --save 
+            # Install only production dependencies
+            npm ci --omit=dev --ignore-scripts
             
+            # Install sharp for the correct platform
             npm install --platform=linux --arch=x64 sharp
             
+            # Generate Prisma client
             npx prisma generate
             
+            # Set environment variables and start PM2
             export GEMINI_API_KEY="${{ secrets.GEMINI_API_KEY }}"
             export PINECONE_API_KEY="${{ secrets.PINECONE_API_KEY }}"
             export PINECONE_ENVIRONMENT="${{ secrets.PINECONE_ENVIRONMENT }}"
@@ -92,4 +115,7 @@ jobs:
             export STRIPE_SECRET_KEY="${{ secrets.STRIPE_SECRET_KEY }}"
             
             pm2 restart ecosystem.config.js --env production || pm2 start ecosystem.config.js --env production
+            
+            # Show final disk usage
+            df -h
           EOF
