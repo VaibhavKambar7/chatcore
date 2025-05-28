@@ -1,5 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import CopyButton from "./copy-button";
 
 interface Message {
   role: "user" | "assistant";
@@ -55,38 +56,30 @@ export function ChatInterface({
           {messages.map((message, index) => (
             <div key={index} className="flex flex-col">
               <div
-                className={`max-w-[80%] p-4 rounded-2xl transition-all duration-200 ${
+                className={`max-w-[80%] p-4 rounded-2xl transition-all duration-200 relative group ${
                   message.role === "assistant"
                     ? "self-start bg-gray-50 border border-gray-300 text-gray-800"
                     : "self-end bg-[#F2F2F2] border border-gray-300 text-gray-800"
                 }`}
               >
-                <div>
-                  {message.role === "assistant" ? (
-                    <>
-                      <div className="prose prose-md w-full">
-                        <div className="flex items-center gap-2">
-                          {/* {isProcessing &&
-                            message === messages[messages.length - 1] && (
-                              <div className="w-2 h-2 bg-gray-600 rounded-md animate-growRotate"></div>
-                            )} */}
-                          <div className="flex-grow">
-                            <ReactMarkdown>{message.content}</ReactMarkdown>
-                          </div>
-                        </div>
-
-                        {isResponding &&
-                          message === messages[messages.length - 1] && (
-                            <div className="w-2 h-2 bg-gray-600 rounded-md animate-growRotate" />
-                          )}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="prose prose-md w-full">
-                      <span>{message.content}</span>
-                    </div>
-                  )}
-                </div>
+                {message.role === "assistant" ? (
+                  <div className="prose prose-md w-full">
+                    <ReactMarkdown>{message.content}</ReactMarkdown>
+                    {isResponding &&
+                      message === messages[messages.length - 1] && (
+                        <div className="w-2 h-2 bg-gray-600 rounded-md animate-growRotate" />
+                      )}
+                  </div>
+                ) : (
+                  <div className="prose prose-md w-full">
+                    <span>{message.content}</span>
+                  </div>
+                )}
+                {message.role === "assistant" && (
+                  <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <CopyButton textToCopy={message.content} />
+                  </div>
+                )}
               </div>
               {message.role === "assistant" &&
                 index === 0 &&
@@ -117,7 +110,9 @@ export function ChatInterface({
         </div>
       </div>
       <div
-        className={`flex border ${isProcessing ? "border-gray-300" : "border-gray-400"}`}
+        className={`flex border ${
+          isProcessing ? "border-gray-300" : "border-gray-400"
+        }`}
       >
         <input
           type="text"
