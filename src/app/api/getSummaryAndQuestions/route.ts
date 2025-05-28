@@ -1,5 +1,8 @@
 import prisma from "@/lib/prisma";
-import { generateSummaryAndQuestions } from "@/service/llmService";
+import {
+  generateSummaryOnly,
+  generateQuestionsOnly,
+} from "@/service/llmService";
 import { NextResponse } from "next/server";
 
 export const POST = async (req: Request) => {
@@ -25,23 +28,76 @@ export const POST = async (req: Request) => {
       );
     }
 
-    const { summary, questions } = await generateSummaryAndQuestions(
-      document.extractedText,
-    );
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        let fullSummary = "";
 
-    await prisma.document.update({
-      where: { slug: id },
-      data: {
-        chatHistory: [
-          {
-            role: "assistant",
-            content: summary,
-          },
-        ],
+        try {
+          const onSummaryChunk = (chunk: string) => {
+            console.log("Sending chunk:", chunk);
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({ summaryChunk: chunk })}\n\n`,
+              ),
+            );
+            fullSummary += chunk;
+          };
+
+          console.log("Starting summary generation...");
+          await generateSummaryOnly(
+            document.extractedText ?? "",
+            onSummaryChunk,
+          );
+          console.log(
+            "Summary generation complete. Full summary length:",
+            fullSummary.length,
+          );
+
+          console.log("Starting questions generation...");
+          const questions = await generateQuestionsOnly(
+            document.extractedText ?? "",
+          );
+          console.log("Questions generated:", questions);
+
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ questions })}\n\n`),
+          );
+
+          await prisma.document.update({
+            where: { slug: id },
+            data: {
+              chatHistory: [
+                {
+                  role: "assistant",
+                  content: fullSummary,
+                },
+              ],
+            },
+          });
+
+          console.log("Sending [DONE] signal");
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        } catch (error) {
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({ error: "Stream error occurred" })}\n\n`,
+            ),
+          );
+          console.error("Streaming error:", error);
+        } finally {
+          controller.close();
+        }
       },
     });
 
-    return NextResponse.json({ summary, questions });
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
+    });
   } catch (error) {
     console.error("Error in /api/getSummaryAndQuestions:", error);
     return NextResponse.json(

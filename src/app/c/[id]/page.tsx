@@ -47,10 +47,11 @@ const Chat = () => {
     const fetchChatsAndPdf = async () => {
       setLoading(true);
       setIsProcessing(true);
+      setIsResponding(true);
       setMessages([
         {
           role: "assistant",
-          content: "Processing your PDF...",
+          content: "",
           isProcessing: true,
         },
       ]);
@@ -67,12 +68,14 @@ const Chat = () => {
         if (chatHistory?.[0]) {
           setMessages(chatHistory);
           setIsProcessing(false);
+          setIsResponding(false);
           setShowQuestions(false);
         } else {
           if (!embeddingsGenerated) {
             await handlePdf();
           }
           setIsProcessing(false);
+          setIsResponding(false);
         }
 
         if (!pdfResponse.data.pdf) {
@@ -88,6 +91,8 @@ const Chat = () => {
           },
         ]);
         setIsProcessing(false);
+        setIsResponding(false);
+        false;
         toast.error("Failed to load chat history or PDF.");
       } finally {
         setLoading(false);
@@ -102,21 +107,143 @@ const Chat = () => {
     setError("");
     try {
       await axios.post("/api/processDocument", { id: params.id });
-      const response = await axios.post("/api/getSummaryAndQuestions", {
-        id: params.id,
-      });
-      setMessages([
-        {
-          role: "assistant",
-          content: response.data.summary,
+
+      const response = await fetch("/api/getSummaryAndQuestions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      ]);
-      setQuestions(response.data.questions);
+        body: JSON.stringify({
+          id: params.id,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No reader available");
+
+      const decoder = new TextDecoder();
+      let streamedSummary = "";
+
+      console.log("Starting to read stream...");
+
+      setMessages((prevMessages) => {
+        const newMessages = [...prevMessages];
+        if (!newMessages.some((msg) => msg.isProcessing)) {
+          newMessages.push({
+            role: "assistant",
+            content: "",
+            isProcessing: true,
+          });
+        }
+        return newMessages;
+      });
+
+      while (true) {
+        const { done, value } = await reader.read();
+
+        console.log("Read chunk:", { done, valueLength: value?.length });
+
+        if (done) {
+          console.log("Stream completed");
+          break;
+        }
+
+        const chunk = decoder.decode(value, { stream: true });
+        console.log("Decoded chunk:", chunk);
+
+        const lines = chunk.split("\n\n");
+
+        for (const line of lines) {
+          if (line.startsWith("data:")) {
+            const data = line.slice(5).trim();
+            console.log("Processing data:", data);
+
+            if (data === "[DONE]") {
+              console.log("Received [DONE] signal");
+              setMessages((prevMessages) => {
+                const newMessages = [...prevMessages];
+                const lastMessageIndex = newMessages.length - 1;
+                if (
+                  lastMessageIndex >= 0 &&
+                  newMessages[lastMessageIndex].role === "assistant"
+                ) {
+                  newMessages[lastMessageIndex] = {
+                    ...newMessages[lastMessageIndex],
+                    isProcessing: false,
+                  };
+                }
+                return newMessages;
+              });
+              continue;
+            }
+
+            try {
+              const parsed = JSON.parse(data);
+              console.log("Parsed data:", parsed);
+
+              if (parsed.summaryChunk) {
+                streamedSummary += parsed.summaryChunk;
+                console.log("Updated summary length:", streamedSummary.length);
+
+                setMessages((prevMessages) => {
+                  const newMessages = [...prevMessages];
+                  const lastMessageIndex = newMessages.length - 1;
+
+                  if (
+                    lastMessageIndex >= 0 &&
+                    newMessages[lastMessageIndex].role === "assistant"
+                  ) {
+                    newMessages[lastMessageIndex] = {
+                      ...newMessages[lastMessageIndex],
+                      content: streamedSummary,
+                    };
+                  }
+                  return newMessages;
+                });
+              }
+
+              if (parsed.questions && Array.isArray(parsed.questions)) {
+                console.log("Received questions:", parsed.questions);
+                setQuestions(parsed.questions);
+              }
+
+              if (parsed.error) {
+                throw new Error(parsed.error);
+              }
+            } catch (error) {
+              console.error(
+                "Error parsing stream data:",
+                error,
+                "Data was:",
+                data,
+              );
+            }
+          }
+        }
+      }
+
+      console.log("Final streamed summary:", streamedSummary);
       setShowQuestions(true);
     } catch (err) {
       console.error("Error processing document:", err);
       setError((err as Error).message);
       toast.error("Failed to process document.");
+
+      setMessages((prevMessages) => {
+        return prevMessages.map((msg) =>
+          msg.isProcessing
+            ? {
+                ...msg,
+                isProcessing: false,
+                content: "Error: Unable to load content.",
+              }
+            : msg,
+        );
+      });
     }
   };
 

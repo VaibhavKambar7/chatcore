@@ -79,8 +79,35 @@ const generateSummaryAndQuestionsPrompt = ChatPromptTemplate.fromMessages([
   ],
 ]);
 
+const summaryPrompt = ChatPromptTemplate.fromTemplate(`
+      Please provide a comprehensive summary of the following document. 
+      Focus on the main points, key concepts, and important details.
+      Do not include questions or any other content - just the summary.
+      
+      Document:
+      {text}
+      
+      Summary:
+    `);
+
+const questionsPrompt = ChatPromptTemplate.fromTemplate(`
+Generate three specific, concise questions that can be answered **directly and solely** from the explicit information stated in the following document. 
+Do **not** generate questions that require assumptions, inference, interpretation, or external knowledge. Only include facts that are **clearly and unambiguously present** in the document.
+
+- The questions should be mature and meaningful, avoiding simple one-word or fill-in-the-blank formats.
+- Ensure that each question has a **clear answer found directly in the text**.
+- If the document lacks sufficient detail, generate fewer questions or return an empty array.
+
+Return the result as a JSON array of strings, like: ["Question 1?", "Question 2?", "Question 3?"]
+
+Document:
+{text}
+`);
+
 export {
   contextualQueryPrompt,
+  summaryPrompt,
+  questionsPrompt,
   generateSummaryAndQuestionsPrompt,
   textOnlyPrompt,
 };

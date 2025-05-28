@@ -3,6 +3,8 @@ import { BaseMessage, HumanMessage, AIMessage } from "@langchain/core/messages";
 import dotenv from "dotenv";
 import {
   contextualQueryPrompt,
+  questionsPrompt,
+  summaryPrompt,
   generateSummaryAndQuestionsPrompt,
   textOnlyPrompt,
 } from "../app/utils/prompts";
@@ -87,14 +89,106 @@ export async function generatePureLLMResponseStream(
   }
 }
 
-export const generateSummaryAndQuestions = async (
+export const generateSummaryOnly = async (
   text: string,
-): Promise<{ summary: string; questions: string[] }> => {
+  onChunk: (chunk: string) => void,
+): Promise<string> => {
+  try {
+    let fullSummary = "";
+    let tokenCount = 0;
+
+    const model = new ChatGoogleGenerativeAI({
+      modelName: "gemini-2.0-flash-exp",
+      temperature: 0.7,
+      apiKey: process.env.GEMINI_API_KEY,
+      streaming: true,
+      callbacks: [
+        {
+          handleLLMNewToken(token) {
+            tokenCount++;
+            fullSummary += token;
+            onChunk(token);
+            console.log(`Token ${tokenCount}: "${token}"`);
+          },
+        },
+      ],
+    });
+
+    const chain = summaryPrompt.pipe(model);
+    await chain.invoke({
+      text: text.substring(0, 15000),
+    });
+
+    console.log(`Final summary length: ${fullSummary.length}`);
+    console.log(`Total tokens received: ${tokenCount}`);
+
+    return fullSummary;
+  } catch (error) {
+    console.error("Error generating summary:", error);
+    return "Unable to generate summary for this document.";
+  }
+};
+
+export const generateQuestionsOnly = async (
+  text: string,
+): Promise<string[]> => {
   try {
     const model = new ChatGoogleGenerativeAI({
       modelName: "gemini-2.0-flash-exp",
       temperature: 0.7,
       apiKey: process.env.GEMINI_API_KEY,
+      streaming: false,
+    });
+
+    const chain = questionsPrompt.pipe(model);
+    const response = await chain.invoke({
+      text: text.substring(0, 15000),
+    });
+
+    let content = response.content as string;
+
+    content = content.trim();
+    if (content.includes("```")) {
+      content = content.replace(/```json\s*|\s*```/g, "");
+    }
+
+    const questions = JSON.parse(content);
+
+    if (Array.isArray(questions)) {
+      return questions.slice(0, 3);
+    } else {
+      throw new Error("Response is not an array");
+    }
+  } catch (error) {
+    console.error("Error generating questions:", error);
+    return [
+      "What is this document about?",
+      "What are the key points?",
+      "Can you explain the main concepts?",
+    ];
+  }
+};
+
+export const generateSummaryAndQuestions = async (
+  text: string,
+  onChunk: (chunk: string) => void,
+): Promise<{ summary: string; questions: string[] }> => {
+  try {
+    let streamedContent = "";
+
+    const model = new ChatGoogleGenerativeAI({
+      modelName: "gemini-2.0-flash-exp",
+      temperature: 0.7,
+      apiKey: process.env.GEMINI_API_KEY,
+      streaming: true,
+      callbacks: [
+        {
+          handleLLMNewToken(token) {
+            onChunk(token);
+            streamedContent += token;
+          },
+        },
+      ],
     });
 
     const chain = generateSummaryAndQuestionsPrompt.pipe(model);
@@ -102,13 +196,32 @@ export const generateSummaryAndQuestions = async (
       text: text.substring(0, 15000),
     });
 
-    let cleanedContent = response.content as string;
+    let contentToParse = streamedContent || (response.content as string);
 
-    if (cleanedContent.includes("```")) {
-      cleanedContent = cleanedContent.replace(/```json\s*|\s*```/g, "");
+    if (contentToParse.includes("```")) {
+      contentToParse = contentToParse.replace(/```json\s*|\s*```/g, "");
     }
 
-    return JSON.parse(cleanedContent);
+    let parsedResult;
+    try {
+      parsedResult = JSON.parse(contentToParse);
+    } catch (parseError) {
+      const jsonMatch = contentToParse.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        parsedResult = JSON.parse(jsonMatch[0]);
+      } else {
+        throw parseError;
+      }
+    }
+
+    if (!parsedResult.summary || !Array.isArray(parsedResult.questions)) {
+      throw new Error("Invalid response structure");
+    }
+
+    return {
+      summary: parsedResult.summary,
+      questions: parsedResult.questions,
+    };
   } catch (error) {
     console.error("Error generating summary and questions:", error);
     return {

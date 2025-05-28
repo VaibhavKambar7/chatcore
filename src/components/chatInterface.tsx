@@ -66,10 +66,10 @@ export function ChatInterface({
                     <>
                       <div className="prose prose-md w-full">
                         <div className="flex items-center gap-2">
-                          {isProcessing &&
+                          {/* {isProcessing &&
                             message === messages[messages.length - 1] && (
                               <div className="w-2 h-2 bg-gray-600 rounded-md animate-growRotate"></div>
-                            )}
+                            )} */}
                           <div className="flex-grow">
                             <ReactMarkdown>{message.content}</ReactMarkdown>
                           </div>
