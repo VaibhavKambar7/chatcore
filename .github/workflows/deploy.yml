@@ -74,23 +74,36 @@ jobs:
           rsync -avz -e "ssh -i ~/.ssh/id_rsa" --exclude='cache' --exclude='*.map' ./.next/ ${{ secrets.USERNAME }}@${{ secrets.HOST }}:~/app/.next/
           rsync -avz -e "ssh -i ~/.ssh/id_rsa" package.json package-lock.json ecosystem.config.js ${{ secrets.USERNAME }}@${{ secrets.HOST }}:~/app/
 
-      - name: Install system dependencies for 'sharp' on EC2
+      - name: Install system dependencies
         run: |
           ssh -i ~/.ssh/id_rsa ${{ secrets.USERNAME }}@${{ secrets.HOST }} << 'EOF'
             sudo apt-get update
-            sudo apt-get install -y libvips-dev || true
+            sudo apt-get install -y libvips-dev python3 make g++ || true
           EOF
 
-      - name: Install production dependencies, generate Prisma client, and restart with PM2
+      - name: Install dependencies and fix Sharp
         run: |
           ssh -i ~/.ssh/id_rsa ${{ secrets.USERNAME }}@${{ secrets.HOST }} << 'EOF'
             cd ~/app
             
-            # Install only production dependencies
-            npm ci --omit=dev --ignore-scripts
+            # Complete clean install
+            rm -rf node_modules package-lock.json
             
-            # Install sharp for the correct platform
-            npm install --platform=linux --arch=x64 sharp
+            # Install dependencies
+            npm install --omit=dev
+            
+            # Force install sharp for linux
+            npm uninstall sharp
+            npm install sharp --platform=linux --arch=x64
+            
+            # Fix sharp in @xenova/transformers if it exists
+            if [ -d "node_modules/@xenova/transformers" ]; then
+              echo "Fixing sharp in @xenova/transformers..."
+              cd node_modules/@xenova/transformers
+              rm -rf node_modules/sharp
+              npm install sharp --platform=linux --arch=x64
+              cd ~/app
+            fi
             
             # Generate Prisma client
             npx prisma generate
@@ -116,6 +129,7 @@ jobs:
             
             pm2 restart ecosystem.config.js --env production || pm2 start ecosystem.config.js --env production
             
-            # Show final disk usage
+            # Show final disk usage and PM2 status
             df -h
+            pm2 status
           EOF
