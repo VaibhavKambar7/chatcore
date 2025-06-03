@@ -13,6 +13,7 @@ import ProfileModal from "./profile-modal";
 import UpgradeModal from "./upgrade-modal";
 import Image from "next/image";
 import { STORAGE_KEY } from "@/app/utils/constants";
+import { toast } from "sonner";
 
 interface Chat {
   slug: string;
@@ -208,7 +209,16 @@ export default function Sidebar({
       const { documents } = res.data;
       setChats(documents);
     } catch (err) {
-      console.error("Search error:", err);
+      if (axios.isAxiosError(err)) {
+        if (err.response?.status === 401) {
+          console.error("Unauthorized access");
+        } else {
+          console.error("API error:", err.response?.data?.error || err.message);
+        }
+      } else {
+        console.error("Unexpected search error:", err);
+        toast.error("Something went wrong. Please try again.");
+      }
     } finally {
       setLoading(false);
     }

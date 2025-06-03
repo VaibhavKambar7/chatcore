@@ -84,7 +84,7 @@ const ProfileModal: React.FC<UserProfileModalProps> = ({
               <div className="text-black text-md">{data?.user?.email}</div>
               <button
                 onClick={handleSignOut}
-                className="text-black border border-black bg-white px-4 py-1 text-md hover:bg-black hover:text-white"
+                className="text-black border border-black bg-white px-4 py-1 text-md hover:bg-black hover:text-white cursor-pointer"
               >
                 Sign out
               </button>

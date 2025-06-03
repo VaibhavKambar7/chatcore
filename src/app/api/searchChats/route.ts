@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const whereClause = {
-      User: { email: session.user?.email },
+      User: { email: session?.user?.email },
       ...(keyword
         ? {
             fileName: {
