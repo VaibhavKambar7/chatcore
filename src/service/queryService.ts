@@ -1,12 +1,10 @@
-import { pipeline } from "@xenova/transformers";
+import { getEmbeddingPipeline } from "@/app/utils/getEmbeddingPipeline";
 import { index } from "./uploadService";
 
 async function embedQuery(query: string): Promise<number[]> {
   try {
-    const embeddingPipeline = await pipeline(
-      "feature-extraction",
-      "Xenova/all-mpnet-base-v2",
-    );
+    const embeddingPipeline = await getEmbeddingPipeline();
+
     const output = await embeddingPipeline(query, {
       pooling: "mean",
       normalize: true,

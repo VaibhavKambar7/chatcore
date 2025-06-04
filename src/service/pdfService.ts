@@ -1,6 +1,6 @@
 import nlp from "compromise";
 import { LlamaParseReader } from "llamaindex";
-import { pipeline } from "@xenova/transformers";
+import { getEmbeddingPipeline } from "@/app/utils/getEmbeddingPipeline";
 import * as dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
@@ -220,10 +220,7 @@ export const chunkText = async (
 };
 
 export const embedChunks = async (chunkOutputs: ChunkType[]) => {
-  const embeddingPipeline = await pipeline(
-    "feature-extraction",
-    "Xenova/all-mpnet-base-v2",
-  );
+  const embeddingPipeline = await getEmbeddingPipeline();
 
   return await Promise.all(
     chunkOutputs.map(async (chunk) => {
@@ -240,7 +237,7 @@ export const embedChunks = async (chunkOutputs: ChunkType[]) => {
         id: chunk.id,
         text: chunk.text,
         metadata: chunk.metadata,
-        embedding: Array.from(output.data),
+        embedding: Array.from(output.data) as number[],
       };
     }),
   );

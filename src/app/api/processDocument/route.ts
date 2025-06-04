@@ -2,6 +2,7 @@ import {
   extractTextFromPDF,
   chunkText,
   embedChunks,
+  ChunkType,
 } from "@/service/pdfService";
 import { getFileFromS3 } from "@/service/s3Service";
 import { upsertData } from "@/service/uploadService";
@@ -55,8 +56,7 @@ export async function POST(req: Request) {
     if (tokenCount > Number(MAX_TOKEN_THRESHOLD)) {
       const chunkOutputs = await chunkText(text, 1);
       console.log("Chunk outputs:", JSON.stringify(chunkOutputs, null, 4));
-      const embeddedChunks = await embedChunks(chunkOutputs);
-
+      const embeddedChunks: ChunkType[] = await embedChunks(chunkOutputs);
       await upsertData(embeddedChunks, id);
 
       await prisma.document.update({
