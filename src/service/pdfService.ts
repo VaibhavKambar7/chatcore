@@ -1,5 +1,5 @@
 import nlp from "compromise";
-import { LlamaParseReader } from "llamaindex";
+import { LlamaParseReader, Document as LlamaDocument } from "llamaindex";
 import { getEmbeddingPipeline } from "@/app/utils/getEmbeddingPipeline";
 import * as dotenv from "dotenv";
 import fs from "fs";
@@ -18,9 +18,23 @@ export type ChunkType = {
     chunkIndex: string;
     context: string;
     sectionTitle?: string;
+    pageNumber?: number;
   };
   embedding?: number[];
 };
+
+export interface PageContent {
+  text: string;
+  pageNumber: number;
+}
+
+interface PreChunk {
+  text: string;
+  metadata: {
+    pageNumber: number;
+    totalPages: number;
+  };
+}
 
 export const extractTextFromPDF = async (pdfBuffer: Buffer) => {
   try {
@@ -37,21 +51,40 @@ export const extractTextFromPDF = async (pdfBuffer: Buffer) => {
       apiKey: LLAMA_API_KEY,
     });
 
-    const documents = await reader.loadData(tempFilePath);
-
-    let extractedText = "";
-    for (const doc of documents) {
-      extractedText += doc.text;
-    }
-
+    const documents: LlamaDocument[] = await reader.loadData(tempFilePath);
     fs.unlinkSync(tempFilePath);
 
-    console.log("Extracted text:", JSON.stringify(extractedText, null, 4));
+    const pagesData: PageContent[] = [];
+    let fullTextForTokenCount = "";
 
-    const tokenCount = estimateTokenCount(extractedText);
-    console.log(`Estimated token count: ${tokenCount}`);
+    for (const doc of documents) {
+      let pageNumber = -1;
+      const idPageMatch = doc.id_?.match(/_(\d+)$/);
+      if (idPageMatch && idPageMatch[1]) {
+        pageNumber = parseInt(idPageMatch[1], 10);
+      } else if (doc.metadata?.page_label) {
+        pageNumber = parseInt(String(doc.metadata.page_label), 10);
+      } else {
+        console.warn(
+          `Could not reliably determine page number for doc id: ${doc.id_}. Check LlamaParse output structure. Using sequential as fallback.`,
+        );
+        pageNumber = pagesData.length + 1;
+      }
 
-    return { text: extractedText, totalPages: documents.length, tokenCount };
+      pagesData.push({ text: doc.text, pageNumber });
+      fullTextForTokenCount += doc.text + "\n\n";
+    }
+
+    pagesData.sort((a, b) => a.pageNumber - b.pageNumber);
+
+    const tokenCount = estimateTokenCount(fullTextForTokenCount);
+
+    return {
+      pagesData,
+      totalPages: documents.length,
+      tokenCount,
+      rawExtractedText: fullTextForTokenCount.trim(),
+    };
   } catch (error) {
     console.error("Error extracting text from PDF with LlamaParse:", error);
     throw new Error("Failed to process the PDF file.");
@@ -59,90 +92,47 @@ export const extractTextFromPDF = async (pdfBuffer: Buffer) => {
 };
 
 export const chunkText = async (
-  text: string,
+  pageText: string,
   totalPages: number,
-): Promise<ChunkType[]> => {
+  pageNumber: number,
+): Promise<PreChunk[]> => {
   const maxChunkSizeChars: number = 1500;
   const overlapRatio: number = 0.15;
 
-  const processedText: string = text.replace(/\s+/g, " ").trim();
+  const processedText: string = pageText.replace(/\s+/g, " ").trim();
   if (!processedText) {
-    console.warn("Input text is empty after processing whitespace.");
     return [];
   }
-  console.log(
-    `Original text length: ${text.length}, Processed text length: ${processedText.length}`,
-  );
 
   const sentences: string[] =
     (nlp(processedText).sentences().out("array") as string[]) || [];
-  console.log(`Split into ${sentences.length} sentences.`);
 
+  const pageInternalChunks: PreChunk[] = [];
   if (sentences.length === 0) {
-    console.warn("Compromise NLP couldn't split the text into sentences.");
-    if (processedText.length <= maxChunkSizeChars && processedText.length > 0) {
-      console.log("Treating entire text as a single chunk.");
-      return [
-        {
-          id: "chunk-0",
-          text: processedText,
-          metadata: {
-            totalPages,
-            chunkIndex: "0",
-            context: "",
-          },
-        },
-      ];
-    } else if (processedText.length > 0) {
-      console.warn(
-        "Sentence splitting failed, and text is too long for a single chunk. Consider alternative splitting or check input text.",
-      );
-      return [
-        {
-          id: "chunk-0",
-          text: processedText.substring(0, maxChunkSizeChars),
-          metadata: { totalPages, chunkIndex: "0", context: "" },
-        },
-      ];
-    } else {
-      return [];
+    if (processedText.length > 0) {
+      pageInternalChunks.push({
+        text: processedText,
+        metadata: { totalPages, pageNumber },
+      });
     }
+    return pageInternalChunks;
   }
 
-  const finalChunks: ChunkType[] = [];
   let currentChunkSentences: string[] = [];
   let currentChunkChars: number = 0;
-  let chunkNumber: number = 0;
 
-  const addChunk = (
-    sentencesToAdd: string[],
-    number: number,
-    _contextInfo: string = "Normal",
-  ): void => {
-    const chunkText: string = sentencesToAdd.join(" ").trim();
-    if (!chunkText) return;
+  const addPreChunk = (sentencesToAdd: string[]): void => {
+    const chunkTextContent: string = sentencesToAdd.join(" ").trim();
+    if (!chunkTextContent) return;
 
-    let context: string = "";
-    if (finalChunks.length > 0) {
-      const prevChunk = finalChunks[finalChunks.length - 1];
-      const prevSentences: string[] =
-        (nlp(prevChunk.text).sentences().out("array") as string[]) || [];
-      if (prevSentences.length > 0) {
-        context = prevSentences[prevSentences.length - 1].trim();
-      }
-    }
-
-    const newChunk: ChunkType = {
-      id: `chunk-${number}`,
-      text: chunkText,
+    const newPreChunk: PreChunk = {
+      text: chunkTextContent,
       metadata: {
         totalPages: totalPages,
-        chunkIndex: `${number}`,
-        context: context,
+        pageNumber: pageNumber,
       },
     };
-
-    finalChunks.push(newChunk);
+    pageInternalChunks.push(newPreChunk);
   };
 
   for (let i = 0; i < sentences.length; i++) {
@@ -152,44 +142,38 @@ export const chunkText = async (
     const sentenceLen: number = sentence.length;
 
     if (sentenceLen > maxChunkSizeChars) {
-      console.warn(
-        `Sentence ${i} ("${sentence.substring(0, 50)}...") is longer (${sentenceLen} chars) than maxChunkSizeChars (${maxChunkSizeChars}). Splitting.`,
-      );
-
       if (currentChunkSentences.length > 0) {
-        addChunk(currentChunkSentences, chunkNumber++, "Before long sentence");
+        addPreChunk(currentChunkSentences);
         currentChunkSentences = [];
         currentChunkChars = 0;
       }
-
       const words: string[] = sentence.split(" ");
       let partChunk: string = "";
       for (let j = 0; j < words.length; j++) {
         const word: string = words[j];
-        const potentialPartLength =
-          partChunk.length + (partChunk ? 1 : 0) + word.length;
-
-        if (potentialPartLength > maxChunkSizeChars && partChunk) {
-          addChunk([partChunk], chunkNumber++, "Long sentence part");
+        if (
+          partChunk.length + (partChunk ? 1 : 0) + word.length >
+            maxChunkSizeChars &&
+          partChunk
+        ) {
+          addPreChunk([partChunk]);
           partChunk = word;
         } else {
           partChunk = partChunk ? `${partChunk} ${word}` : word;
         }
       }
-      if (partChunk) {
-        addChunk([partChunk], chunkNumber++, "Long sentence remainder");
-      }
+      if (partChunk) addPreChunk([partChunk]);
       continue;
     }
 
-    const potentialSize: number =
+    if (
       currentChunkChars +
-      (currentChunkSentences.length > 0 ? 1 : 0) +
-      sentenceLen;
-
-    if (potentialSize > maxChunkSizeChars && currentChunkSentences.length > 0) {
-      addChunk(currentChunkSentences, chunkNumber++, "Filled chunk");
-
+        (currentChunkSentences.length > 0 ? 1 : 0) +
+        sentenceLen >
+        maxChunkSizeChars &&
+      currentChunkSentences.length > 0
+    ) {
+      addPreChunk(currentChunkSentences);
       const overlapCount: number = Math.max(
         1,
         Math.floor(currentChunkSentences.length * overlapRatio),
@@ -198,10 +182,10 @@ export const chunkText = async (
         0,
         currentChunkSentences.length - overlapCount,
       );
-      const overlapSentences: string[] =
-        currentChunkSentences.slice(overlapStartIndex);
-
-      currentChunkSentences = [...overlapSentences, sentence];
+      currentChunkSentences = [
+        ...currentChunkSentences.slice(overlapStartIndex),
+        sentence,
+      ];
       currentChunkChars = currentChunkSentences.join(" ").length;
     } else {
       currentChunkSentences.push(sentence);
@@ -210,13 +194,10 @@ export const chunkText = async (
   }
 
   if (currentChunkSentences.length > 0) {
-    addChunk(currentChunkSentences, chunkNumber++, "Final chunk");
+    addPreChunk(currentChunkSentences);
   }
 
-  console.log(
-    `Generated ${finalChunks.length} chunks using sentence-aware logic.`,
-  );
-  return finalChunks;
+  return pageInternalChunks;
 };
 
 export const embedChunks = async (chunkOutputs: ChunkType[]) => {

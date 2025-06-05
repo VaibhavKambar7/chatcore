@@ -21,7 +21,8 @@ const pc = new Pinecone({
 //     tags: { environment: "development" },
 //   });
 
-export const index = pc.index("rag");
+// export const index = pc.index("rag");
+export const index = pc.index("rag-new");
 
 export const upsertData = async (embeddedChunks: ChunkType[], slug: string) => {
   if (!Array.isArray(embeddedChunks) || embeddedChunks.length === 0) {
