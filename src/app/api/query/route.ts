@@ -44,13 +44,55 @@ export async function POST(req: Request) {
           };
 
           if (document.embeddingsGenerated) {
-            const context = await queryDB(query, documentId);
-            await generateContextualLLMResponseStream(
-              query,
-              context,
-              history,
-              onChunk,
-            );
+            try {
+              const context = await queryDB(query, documentId);
+              // Check if context is the specific "no results" string or empty
+              if (
+                context === "No matching results found to construct context." ||
+                !context.trim()
+              ) {
+                const noContextMessage =
+                  "I couldn't find specific context in the document for your query. I'll try to answer more generally based on the document's full text if available:\n\n";
+                controller.enqueue(
+                  encoder.encode(
+                    `data: ${JSON.stringify({ chunk: noContextMessage })}\n\n`,
+                  ),
+                );
+                fullResponse += noContextMessage;
+                await generatePureLLMResponseStream(
+                  query,
+                  document.extractedText ?? "",
+                  history,
+                  onChunk,
+                );
+              } else {
+                await generateContextualLLMResponseStream(
+                  query,
+                  context,
+                  history,
+                  onChunk,
+                );
+              }
+            } catch (dbError) {
+              console.error("Error querying DB for context:", dbError);
+              const dbErrorMessage =
+                dbError instanceof Error
+                  ? dbError.message
+                  : "Failed to retrieve context from document.";
+              const userMessage = `Sorry, I encountered an issue retrieving specific information from the document (${dbErrorMessage}). I can try to answer more generally based on the document's full text if available.\n\n`;
+              controller.enqueue(
+                encoder.encode(
+                  `data: ${JSON.stringify({ chunk: userMessage })}\n\n`,
+                ),
+              );
+              fullResponse += userMessage;
+              await generatePureLLMResponseStream(
+                query,
+                document.extractedText ?? "",
+                history,
+                onChunk,
+              );
+            }
           } else {
             const text = document.extractedText ?? "";
             await generatePureLLMResponseStream(query, text, history, onChunk);

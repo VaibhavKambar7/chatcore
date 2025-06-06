@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import axios from "axios";
 import { PDFViewer } from "@/components/pdfViewer";
@@ -27,6 +27,9 @@ const Chat = () => {
   const [questions, setQuestions] = useState<string[]>([]);
   const [showQuestions, setShowQuestions] = useState<boolean>(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [targetPdfPage, setTargetPdfPage] = useState<number | undefined>(
+    undefined,
+  );
 
   const { data } = useSession();
   const ipRef = useRef<string>("");
@@ -92,7 +95,6 @@ const Chat = () => {
         ]);
         setIsProcessing(false);
         setIsResponding(false);
-        false;
         toast.error("Failed to load chat history or PDF.");
       } finally {
         setLoading(false);
@@ -100,7 +102,15 @@ const Chat = () => {
       }
     };
 
-    fetchChatsAndPdf();
+    if (params.id) {
+      fetchChatsAndPdf();
+    } else {
+      setLoading(false);
+      setIsProcessing(false);
+      setIsResponding(false);
+      setError("Document ID is missing.");
+      toast.error("Document ID is missing from the URL.");
+    }
   }, [params.id]);
 
   const handlePdf = async () => {
@@ -130,7 +140,14 @@ const Chat = () => {
 
       setMessages((prevMessages) => {
         const newMessages = [...prevMessages];
-        if (!newMessages.some((msg) => msg.isProcessing)) {
+        const lastMessage = newMessages[newMessages.length - 1];
+        if (
+          lastMessage &&
+          lastMessage.role === "assistant" &&
+          lastMessage.isProcessing
+        ) {
+          lastMessage.content = "";
+        } else {
           newMessages.push({
             role: "assistant",
             content: "",
@@ -142,10 +159,7 @@ const Chat = () => {
 
       while (true) {
         const { done, value } = await reader.read();
-
-        if (done) {
-          break;
-        }
+        if (done) break;
 
         const chunk = decoder.decode(value, { stream: true });
 
@@ -154,55 +168,31 @@ const Chat = () => {
         for (const line of lines) {
           if (line.startsWith("data:")) {
             const data = line.slice(5).trim();
-
             if (data === "[DONE]") {
-              setMessages((prevMessages) => {
-                const newMessages = [...prevMessages];
-                const lastMessageIndex = newMessages.length - 1;
-                if (
-                  lastMessageIndex >= 0 &&
-                  newMessages[lastMessageIndex].role === "assistant"
-                ) {
-                  newMessages[lastMessageIndex] = {
-                    ...newMessages[lastMessageIndex],
-                    isProcessing: false,
-                  };
-                }
-                return newMessages;
-              });
+              setMessages((prevMessages) =>
+                prevMessages.map((msg) =>
+                  msg.isProcessing ? { ...msg, isProcessing: false } : msg,
+                ),
+              );
               continue;
             }
-
             try {
               const parsed = JSON.parse(data);
-
               if (parsed.summaryChunk) {
                 streamedSummary += parsed.summaryChunk;
-
-                setMessages((prevMessages) => {
-                  const newMessages = [...prevMessages];
-                  const lastMessageIndex = newMessages.length - 1;
-
-                  if (
-                    lastMessageIndex >= 0 &&
-                    newMessages[lastMessageIndex].role === "assistant"
-                  ) {
-                    newMessages[lastMessageIndex] = {
-                      ...newMessages[lastMessageIndex],
-                      content: streamedSummary,
-                    };
-                  }
-                  return newMessages;
-                });
+                setMessages((prevMessages) =>
+                  prevMessages.map((msg, index) =>
+                    index === prevMessages.length - 1 &&
+                    msg.role === "assistant"
+                      ? { ...msg, content: streamedSummary }
+                      : msg,
+                  ),
+                );
               }
-
               if (parsed.questions && Array.isArray(parsed.questions)) {
                 setQuestions(parsed.questions);
               }
-
-              if (parsed.error) {
-                throw new Error(parsed.error);
-              }
+              if (parsed.error) throw new Error(parsed.error);
             } catch (error) {
               console.error(
                 "Error parsing stream data:",
@@ -214,30 +204,27 @@ const Chat = () => {
           }
         }
       }
-
       setShowQuestions(true);
     } catch (err) {
       console.error("Error processing document:", err);
       setError((err as Error).message);
       toast.error("Failed to process document.");
-
-      setMessages((prevMessages) => {
-        return prevMessages.map((msg) =>
+      setMessages((prevMessages) =>
+        prevMessages.map((msg) =>
           msg.isProcessing
             ? {
                 ...msg,
                 isProcessing: false,
-                content: "Error: Unable to load content.",
+                content: "Error: Unable to load summary.",
               }
             : msg,
-        );
-      });
+        ),
+      );
     }
   };
 
   const handleSend = async (query: string) => {
     if (!query.trim() || isResponding || isProcessing) return;
-
     if (query.length > 4000) {
       toast.warning("Message too long. Please limit to 4000 characters.");
       return;
@@ -245,9 +232,13 @@ const Chat = () => {
 
     const ip = ipRef.current;
     const userMessage: Message = { role: "user", content: query };
+    const currentHistory = messages.filter(
+      (m) => m.content !== "" && !m.isProcessing,
+    );
     setMessages((prev) => [...prev, userMessage]);
     setQuery("");
     setIsResponding(true);
+    setShowQuestions(false);
 
     try {
       const usage = await axios.post("/api/rate-limit/get-usage", {
@@ -257,83 +248,60 @@ const Chat = () => {
 
       if (!usage.data.isProUser && usage.data.messageCount >= MESSAGE_LIMIT) {
         toast.warning("You have reached the limit of 20 messages.");
-        setMessages((prev) => prev.slice(0, -1));
+        setMessages((prev) => prev.filter((msg) => msg !== userMessage));
         setIsResponding(false);
         return;
       }
 
-      const assistantPlaceholder: Message = {
-        role: "assistant",
-        content: "",
-      };
-
+      const assistantPlaceholder: Message = { role: "assistant", content: "" };
       setMessages((prevMessages) => [...prevMessages, assistantPlaceholder]);
 
       const response = await fetch("/api/query", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           query,
-          history: messages,
+          history: currentHistory,
           documentId: params.id,
         }),
       });
 
-      if (!response.ok) {
+      if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
       const reader = response.body?.getReader();
       if (!reader) throw new Error("No reader available");
 
       const decoder = new TextDecoder();
       let streamedContent = "";
-
       while (true) {
         const { done, value } = await reader.read();
-
-        if (done) {
-          break;
-        }
-
+        if (done) break;
         const chunk = decoder.decode(value, { stream: true });
         const lines = chunk.split("\n\n");
-
         for (const line of lines) {
           if (line.startsWith("data:")) {
             const data = line.slice(5).trim();
-
-            if (data === "[DONE]") {
-              continue;
-            }
-
+            if (data === "[DONE]") continue;
             try {
               const parsed = JSON.parse(data);
               if (parsed.chunk) {
                 streamedContent += parsed.chunk;
-                setMessages((prevMessages) => {
-                  const newMessages = [...prevMessages];
-                  if (newMessages.length > 0) {
-                    newMessages[newMessages.length - 1].content =
-                      streamedContent;
-                  }
-                  return newMessages;
-                });
+                setMessages((prevMessages) =>
+                  prevMessages.map((msg, index) =>
+                    index === prevMessages.length - 1 &&
+                    msg.role === "assistant"
+                      ? { ...msg, content: streamedContent }
+                      : msg,
+                  ),
+                );
               }
-
-              if (parsed.error) {
-                console.error("Stream error:", parsed.error);
-                throw new Error(parsed.error);
-              }
+              if (parsed.error) throw new Error(parsed.error);
             } catch (e) {
               console.error("Error parsing stream data:", e, data);
             }
           }
         }
       }
-
       await axios.post("/api/rate-limit/increment-message", {
         ip: ip,
         email: data?.user?.email,
@@ -341,7 +309,6 @@ const Chat = () => {
     } catch (err) {
       console.error("Error fetching response:", err);
       setError((err as Error).message || "Failed to get response");
-
       setMessages((prev) => {
         if (
           prev.length > 0 &&
@@ -352,12 +319,19 @@ const Chat = () => {
         }
         return prev;
       });
-
       toast.error("Failed to get response.");
     } finally {
       setIsResponding(false);
     }
   };
+
+  const handleNavigateToPage = useCallback((pageNumber: number) => {
+    setTargetPdfPage(pageNumber);
+  }, []);
+
+  const handlePageNavigationComplete = useCallback(() => {
+    setTargetPdfPage(undefined);
+  }, []);
 
   return (
     <div className="flex h-screen bg-white">
@@ -368,6 +342,8 @@ const Chat = () => {
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
         ip={ipRef.current}
+        navigateToPageNumber={targetPdfPage}
+        onPageNavigationComplete={handlePageNavigationComplete}
       />
       <ChatInterface
         messages={messages}
@@ -379,6 +355,7 @@ const Chat = () => {
         questions={questions}
         showQuestions={showQuestions}
         setShowQuestions={setShowQuestions}
+        onNavigateToPage={handleNavigateToPage}
       />
     </div>
   );

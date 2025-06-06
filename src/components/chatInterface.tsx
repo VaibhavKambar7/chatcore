@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
+import React, { useEffect, useRef, Fragment, JSX } from "react";
+import ReactMarkdown, { Components } from "react-markdown";
 import CopyButton from "./copy-button";
 
 interface Message {
@@ -18,6 +18,7 @@ interface ChatInterfaceProps {
   questions: string[];
   showQuestions: boolean;
   setShowQuestions: React.Dispatch<React.SetStateAction<boolean>>;
+  onNavigateToPage?: (pageNumber: number) => void;
 }
 
 export function ChatInterface({
@@ -30,6 +31,7 @@ export function ChatInterface({
   questions,
   showQuestions,
   setShowQuestions,
+  onNavigateToPage,
 }: ChatInterfaceProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -44,6 +46,104 @@ export function ChatInterface({
     onQueryChange(question);
     setShowQuestions(false);
     onSend(question);
+  };
+
+  const markdownComponents: Components = {
+    p: ({ node, ...props }) => {
+      const childrenWithCitations = React.Children.toArray(props.children).map(
+        (child, index) => {
+          if (typeof child === "string") {
+            const text = child;
+            const citationRegex = /\(Page (\d+)\)/g;
+            let lastIndex = 0;
+            const parts: (string | JSX.Element)[] = [];
+            let match;
+
+            while ((match = citationRegex.exec(text)) !== null) {
+              if (match.index > lastIndex) {
+                parts.push(text.substring(lastIndex, match.index));
+              }
+              const pageNum = parseInt(match[1], 10);
+              parts.push(
+                <button
+                  key={`btn-cite-${index}-${match.index}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onNavigateToPage) onNavigateToPage(pageNum);
+                  }}
+                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-0.5 px-1.5 rounded-md text-xs mx-0.5 align-middle cursor-pointer transition-colors duration-150 border border-gray-300"
+                  title={`Go to Page ${pageNum}`}
+                >
+                  {pageNum}
+                </button>,
+              );
+              lastIndex = citationRegex.lastIndex;
+            }
+            if (lastIndex < text.length) {
+              parts.push(text.substring(lastIndex));
+            }
+            return parts.length > 0 ? (
+              <Fragment key={`frag-${index}`}>
+                {parts.map((p, i) => (
+                  <Fragment key={i}>{p}</Fragment>
+                ))}
+              </Fragment>
+            ) : (
+              text
+            );
+          }
+          return child;
+        },
+      );
+      return <p className={props.className}>{childrenWithCitations}</p>;
+    },
+    li: ({ node, ...props }) => {
+      const childrenWithCitations = React.Children.toArray(props.children).map(
+        (child, index) => {
+          if (typeof child === "string") {
+            const text = child;
+            const citationRegex = /\(Page (\d+)\)/g;
+            let lastIndex = 0;
+            const parts: (string | JSX.Element)[] = [];
+            let match;
+            while ((match = citationRegex.exec(text)) !== null) {
+              if (match.index > lastIndex) {
+                parts.push(text.substring(lastIndex, match.index));
+              }
+              const pageNum = parseInt(match[1], 10);
+              parts.push(
+                <button
+                  key={`li-btn-cite-${index}-${match.index}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onNavigateToPage) onNavigateToPage(pageNum);
+                  }}
+                  className="bg-gray-300 hover:bg-gray-200 text-gray-700 font-semibold py-0.5 px-1.5 rounded-md text-xs mx-0.5 align-middle cursor-pointer transition-colors duration-150 border border-gray-800"
+                  title={`Go to Page ${pageNum}`}
+                >
+                  {pageNum}
+                </button>,
+              );
+              lastIndex = citationRegex.lastIndex;
+            }
+            if (lastIndex < text.length) {
+              parts.push(text.substring(lastIndex));
+            }
+            return parts.length > 0 ? (
+              <Fragment key={`li-frag-${index}`}>
+                {parts.map((p, i) => (
+                  <Fragment key={i}>{p}</Fragment>
+                ))}
+              </Fragment>
+            ) : (
+              text
+            );
+          }
+          return child;
+        },
+      );
+      return <li className={props.className}>{childrenWithCitations}</li>;
+    },
   };
 
   return (
@@ -64,8 +164,11 @@ export function ChatInterface({
               >
                 {message.role === "assistant" ? (
                   <div className="prose prose-md w-full prose-custom">
-                    <ReactMarkdown>{message.content}</ReactMarkdown>
+                    <ReactMarkdown components={markdownComponents}>
+                      {message.content}
+                    </ReactMarkdown>
                     {isResponding &&
+                      message.content === "" &&
                       message === messages[messages.length - 1] && (
                         <div className="w-2 h-2 bg-gray-600 rounded-md animate-growRotate" />
                       )}
@@ -75,7 +178,7 @@ export function ChatInterface({
                     <span>{message.content}</span>
                   </div>
                 )}
-                {message.role === "assistant" && (
+                {message.role === "assistant" && message.content !== "" && (
                   <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <CopyButton textToCopy={message.content} />
                   </div>
@@ -119,7 +222,8 @@ export function ChatInterface({
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
               onSend(query);
             }
           }}

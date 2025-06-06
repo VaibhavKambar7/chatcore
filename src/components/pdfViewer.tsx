@@ -15,6 +15,8 @@ interface PDFViewerProps {
   setIsSidebarOpen: (open: boolean) => void;
   isSidebarOpen: boolean;
   ip: string;
+  navigateToPageNumber?: number;
+  onPageNavigationComplete?: () => void;
 }
 
 export function PDFViewer({
@@ -24,10 +26,12 @@ export function PDFViewer({
   isSidebarOpen,
   setIsSidebarOpen,
   ip,
+  navigateToPageNumber,
+  onPageNavigationComplete,
 }: PDFViewerProps) {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [scale, setScale] = useState<number>(1.0);
-  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [currentPageNumDisplay, setCurrentPageNumDisplay] = useState<number>(1);
   const [viewerError, setViewerError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -35,7 +39,7 @@ export function PDFViewer({
   useEffect(() => {
     setNumPages(null);
     setViewerError(null);
-    setCurrentPage(1);
+    setCurrentPageNumDisplay(1);
   }, [pdfUrl]);
 
   useEffect(() => {
@@ -58,8 +62,7 @@ export function PDFViewer({
           }
         }
       });
-
-      setCurrentPage(closestPage);
+      setCurrentPageNumDisplay(closestPage);
     };
 
     const container = containerRef.current;
@@ -67,9 +70,29 @@ export function PDFViewer({
     return () => container?.removeEventListener("scroll", handleScroll);
   }, [numPages]);
 
+  useEffect(() => {
+    if (
+      navigateToPageNumber &&
+      navigateToPageNumber > 0 &&
+      navigateToPageNumber <= (numPages || 0)
+    ) {
+      goToPage(navigateToPageNumber);
+      if (onPageNavigationComplete) {
+        onPageNavigationComplete();
+      }
+    }
+  }, [navigateToPageNumber, numPages]);
+
   function onDocumentLoadSuccess({ numPages: total }: { numPages: number }) {
     setNumPages(total);
     pageRefs.current = new Array(total).fill(null);
+    if (
+      navigateToPageNumber &&
+      navigateToPageNumber > 0 &&
+      navigateToPageNumber <= total
+    ) {
+      goToPage(navigateToPageNumber);
+    }
   }
 
   function onDocumentLoadError(err: Error) {
@@ -89,8 +112,14 @@ export function PDFViewer({
   }
 
   function goToPage(pageNum: number) {
+    if (pageNum < 1 || pageNum > (numPages || 0)) {
+      console.warn(`Attempted to go to invalid page: ${pageNum}`);
+      return;
+    }
     const pageRef = pageRefs.current[pageNum - 1];
-    pageRef?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (pageRef) {
+      pageRef.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   }
 
   const displayError = error || viewerError;
@@ -120,7 +149,7 @@ export function PDFViewer({
               <div className="flex items-center space-x-2 text-gray-700">
                 <span className="text-sm font-medium">Page</span>
                 <span className="bg-white text-black border border-black px-2 py-1 rounded-md text-sm font-semibold min-w-[40px] text-center">
-                  {currentPage}
+                  {currentPageNumDisplay}
                 </span>
                 <span className="text-sm text-gray-500">of {numPages}</span>
               </div>

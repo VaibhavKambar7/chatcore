@@ -59,7 +59,7 @@ export async function POST(req: Request) {
     let allFinalChunks = [];
     let globalChunkIndexCounter = 0;
 
-    if (tokenCount < Number(MAX_TOKEN_THRESHOLD)) {
+    if (tokenCount > Number(MAX_TOKEN_THRESHOLD)) {
       console.log(
         `Token count (${tokenCount}) exceeds threshold (${MAX_TOKEN_THRESHOLD}). Chunking document.`,
       );

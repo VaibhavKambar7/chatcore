@@ -29,26 +29,41 @@ export const queryDB = async (
       vector: queryEmbedding,
       includeValues: false,
       includeMetadata: true,
-      // filter: filters,
     });
 
-    console.log("Response:", JSON.stringify(response.matches, null, 4));
+    console.log(
+      "Pinecone response matches:",
+      JSON.stringify(response.matches, null, 2),
+    );
 
     if (response.matches && response.matches.length > 0) {
-      const ans = response.matches
+      const formattedContext = response.matches
         .map((match) => {
-          const text = match.metadata?.text || "No text available";
-          const context = match.metadata?.context;
-          return context ? `Context: ${context}\n${text}` : text;
+          const text = (match.metadata?.text as string) || "No text available";
+          const pageNumber = match.metadata?.pageNumber as number | undefined;
+
+          let chunkString = "";
+          chunkString += text;
+
+          if (pageNumber !== undefined && pageNumber !== null) {
+            return `[Source Page: ${pageNumber}]\n${chunkString}`;
+          }
+          return chunkString;
         })
-        .join("\n\n");
-      console.log("Answer:", JSON.stringify(ans, null, 4));
-      return ans;
+        .join("\n\n---\n\n");
+
+      console.log(
+        "Formatted context for LLM:",
+        JSON.stringify(formattedContext, null, 2),
+      );
+      return formattedContext;
     }
 
-    return "No matching results found.";
+    return "No matching results found to construct context.";
   } catch (error) {
     console.error("Error querying database:", error);
-    return "An error occurred during the query.";
+    throw new Error(
+      `Error querying database: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 };
