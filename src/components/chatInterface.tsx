@@ -118,7 +118,7 @@ export function ChatInterface({
                     e.stopPropagation();
                     if (onNavigateToPage) onNavigateToPage(pageNum);
                   }}
-                  className="bg-gray-300 hover:bg-gray-200 text-gray-700 font-semibold py-0.5 px-1.5 rounded-md text-xs mx-0.5 align-middle cursor-pointer transition-colors duration-150 border border-gray-800"
+                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-0.5 px-1.5 rounded-md text-xs mx-0.5 align-middle cursor-pointer transition-colors duration-150 border border-gray-300"
                   title={`Go to Page ${pageNum}`}
                 >
                   {pageNum}

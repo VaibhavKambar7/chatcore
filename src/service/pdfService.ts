@@ -5,6 +5,7 @@ import * as dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
 import { estimateTokenCount } from "@/app/utils/estimateTokens";
+// import { execSync } from "child_process";
 
 dotenv.config();
 
@@ -45,6 +46,37 @@ export const extractTextFromPDF = async (pdfBuffer: Buffer) => {
 
     const tempFilePath = path.join(tempDir, `temp-${Date.now()}.pdf`);
     fs.writeFileSync(tempFilePath, pdfBuffer);
+
+    /*
+    const pythonPath = "./scripts/chatcore/bin/python3";
+    
+    const ocrOutput = execSync(
+    `${pythonPath} ./scripts/ocr.py "${tempFilePath}"`,
+    ).toString();
+    fs.unlinkSync(tempFilePath);
+    
+    const rawPages = ocrOutput.split(/=== PAGE \d+ ===/).filter(Boolean);
+    
+    const pagesData: PageContent[] = [];
+    let fullTextForTokenCount = "";
+    
+    for (let i = 0; i < rawPages.length; i++) {
+    const text = rawPages[i].trim();
+    const pageNumber = i + 1;
+    
+    pagesData.push({ text, pageNumber });
+    fullTextForTokenCount += text + "\n\n";
+    }
+    
+    const tokenCount = estimateTokenCount(fullTextForTokenCount);
+    
+    return {
+    pagesData,
+    totalPages: rawPages.length,
+    tokenCount,
+    rawExtractedText: fullTextForTokenCount.trim(),
+    };
+    */
 
     const reader = new LlamaParseReader({
       resultType: "markdown",

@@ -26,16 +26,22 @@ Guidelines for your responses:
 
 **EXAMPLES:**
 
-**GOOD EXAMPLE (Consolidated Citation):**
-The proposed system addresses privacy by keeping public keys anonymous. This allows the public to see that a transaction is occurring, but not who is involved. A new key pair should be used for each transaction to prevent linking them to a common owner. (Page 6)
+**GOOD (Consolidated & Proper Style):**  
+The system enhances privacy by anonymizing public keys and ensuring unlinkability through unique key pairs. (Page 6)
 
-**BAD EXAMPLE (Repetitive Citations):**
-The proposed system addresses privacy by keeping public keys anonymous (Page 6). This allows the public to see that a transaction is occurring, but not who is involved (Page 6). A new key pair should be used for each transaction (Page 6).
+**BAD (Repetitive Citations):**  
+The system enhances privacy by anonymizing public keys (Page 6). Each transaction uses a new key (Page 6). This ensures unlinkability (Page 6).
+    
+**BAD (Wrong multi-page style):**  
+This method is discussed in detail (Pages 1, 2, 3 ...n)
 
-**CONTENT GUIDELINES:**
-- If the CONTEXT EXTRACTS do not contain the answer, state that clearly. Say: "Based on the provided extracts, I don't have enough information to answer that."
-- Do not invent information or page numbers.
+**GOOD (Correct multi-page style):**  
+This method is discussed in detail (Page 1)(Page 2)(Page 3) ... (Page n)
 
+**CONTENT RULES:**
+- If the CONTEXT EXTRACTS lack enough information to answer the question, say:  
+  "Based on the provided extracts, I don't have enough information to answer that."
+- Do **not** make up content or page numbers.
 `,
   ],
   ["placeholder", "{history}"],
@@ -43,8 +49,8 @@ The proposed system addresses privacy by keeping public keys anonymous (Page 6).
     "user",
     `Question: {question}
 
-     CONTEXT EXTRACTS:
-     {context}`,
+CONTEXT EXTRACTS:
+{context}`,
   ],
 ]);
 

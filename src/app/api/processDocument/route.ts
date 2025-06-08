@@ -51,6 +51,15 @@ export async function POST(req: Request) {
     const { pagesData, totalPages, tokenCount, rawExtractedText } =
       await extractTextFromPDF(pdfBuffer);
 
+    console.log(
+      "Extracting text from PDF...",
+      pagesData,
+      "Total pages:",
+      totalPages,
+      "Token count:",
+      tokenCount,
+    );
+
     await prisma.document.update({
       where: { slug: id },
       data: { extractedText: rawExtractedText },
