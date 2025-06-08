@@ -1,9 +1,11 @@
-import React, { forwardRef, useState } from "react";
+import React, { forwardRef, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { IoSparkles } from "react-icons/io5";
 import { PiSpinnerBold } from "react-icons/pi";
 import axios from "axios";
 import { toast } from "sonner";
+import { useSession } from "next-auth/react";
+import { signIn } from "next-auth/react";
 
 interface PricingProps {
   selectedPlan: "monthly" | "yearly";
@@ -14,9 +16,31 @@ const Pricing = forwardRef<HTMLElement, PricingProps>(
   ({ selectedPlan, setSelectedPlan }, ref) => {
     const [loading, setLoading] = useState(false);
 
+    const { data: session } = useSession();
+
+    useEffect(() => {
+      if (session) {
+        const storedPlan = localStorage.getItem("selectedPlan");
+        if (storedPlan) {
+          setSelectedPlan(storedPlan as "monthly" | "yearly");
+          localStorage.removeItem("selectedPlan");
+          handleUpgrade();
+        }
+      }
+    }, [session]);
+
     const handleUpgrade = async () => {
       try {
         setLoading(true);
+
+        if (!session) {
+          localStorage.setItem("selectedPlan", selectedPlan);
+          await signIn("google", {
+            callbackUrl: `/?plan=${selectedPlan}#pricing`,
+            redirect: true,
+          });
+          return;
+        }
 
         const response = await axios.post("/api/createCheckoutSession", {
           plan: selectedPlan,

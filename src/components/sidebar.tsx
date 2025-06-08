@@ -127,6 +127,10 @@ export default function Sidebar({
   const fetchChats = useCallback(
     async (page: number = 1, existingChats: Chat[] = []) => {
       try {
+        if (!EMAIL) {
+          setError("Please sign in to continue");
+          return;
+        }
         setError(null);
         if (page === 1) setLoading(true);
         else setLoadingMore(true);
@@ -203,6 +207,10 @@ export default function Sidebar({
   const handleSearch = async () => {
     setLoading(true);
     try {
+      if (!EMAIL) {
+        setError("Please sign in to continue");
+        return;
+      }
       const res = await axios.post(`/api/searchChats`, {
         keyword: searchQuery.trim() || null,
       });
