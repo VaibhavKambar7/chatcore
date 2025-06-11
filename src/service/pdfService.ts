@@ -29,7 +29,7 @@ export interface PageContent {
   pageNumber: number;
 }
 
-interface PreChunk {
+export interface PreChunk {
   text: string;
   metadata: {
     pageNumber: number;

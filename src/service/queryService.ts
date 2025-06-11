@@ -22,6 +22,7 @@ export const queryDB = async (
   sectionTitle?: string,
 ): Promise<string> => {
   try {
+    console.log("Query++++:", query);
     const queryEmbedding = await embedQuery(query);
 
     const response = await index.namespace(slug).query({
@@ -30,6 +31,8 @@ export const queryDB = async (
       includeValues: false,
       includeMetadata: true,
     });
+
+    console.log("Pinecone response matches:", response.matches);
 
     console.log(
       "Pinecone response matches:",

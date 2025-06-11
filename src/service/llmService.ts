@@ -11,12 +11,19 @@ import {
 
 dotenv.config();
 
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+export type ChatHistory = ChatMessage[];
+
 export async function generateContextualLLMResponseStream(
   question: string,
   context: string,
-  history: Array<{ role: "user" | "assistant"; content: string }> = [],
+  history: ChatHistory = [],
   onChunk: (chunk: string) => void,
-) {
+): Promise<void> {
   try {
     const model = new ChatGoogleGenerativeAI({
       modelName: "gemini-2.0-flash-exp",
@@ -32,11 +39,13 @@ export async function generateContextualLLMResponseStream(
       ],
     });
 
-    const formattedHistory: BaseMessage[] = history.map((msg) =>
-      msg.role === "user"
-        ? new HumanMessage(msg.content)
-        : new AIMessage(msg.content),
-    );
+    const formattedHistory: BaseMessage[] = history
+      .filter((msg) => msg && msg.content !== undefined && msg.content !== null)
+      .map((msg) =>
+        msg.role === "user"
+          ? new HumanMessage(msg.content)
+          : new AIMessage(msg.content),
+      );
 
     const chain = contextualQueryPrompt.pipe(model);
     await chain.invoke({
@@ -55,7 +64,7 @@ export async function generatePureLLMResponseStream(
   extractedText: string,
   history: Array<{ role: "user" | "assistant"; content: string }> = [],
   onChunk: (chunk: string) => void,
-) {
+): Promise<void> {
   try {
     const model = new ChatGoogleGenerativeAI({
       modelName: "gemini-2.0-flash-exp",
@@ -71,12 +80,13 @@ export async function generatePureLLMResponseStream(
       ],
     });
 
-    const formattedHistory: BaseMessage[] = history.map((msg) =>
-      msg.role === "user"
-        ? new HumanMessage(msg.content)
-        : new AIMessage(msg.content),
-    );
-
+    const formattedHistory: BaseMessage[] = history
+      .filter((msg) => msg && msg.content !== undefined && msg.content !== null)
+      .map((msg) =>
+        msg.role === "user"
+          ? new HumanMessage(msg.content)
+          : new AIMessage(msg.content),
+      );
     const chain = textOnlyPrompt.pipe(model);
     await chain.invoke({
       question: question,

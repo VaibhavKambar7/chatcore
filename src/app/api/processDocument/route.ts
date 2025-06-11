@@ -1,37 +1,25 @@
-import {
-  extractTextFromPDF,
-  chunkText,
-  embedChunks,
-  ChunkType,
-  PageContent,
-} from "@/service/pdfService";
-import { getFileFromS3 } from "@/service/s3Service";
-import { upsertData } from "@/service/uploadService";
 import { NextResponse } from "next/server";
+import { MainAgent } from "@/agents/main-agent";
+import { getFileFromS3 } from "@/service/s3Service";
 import prisma from "@/lib/prisma";
-import "../../../../logger";
-import { MAX_TOKEN_THRESHOLD } from "@/app/utils/constants";
-import nlp from "compromise";
 
 export async function POST(req: Request) {
   try {
     const { id } = await req.json();
 
     if (!id) {
-      return NextResponse.json({ message: "id is required." }, { status: 400 });
+      return NextResponse.json(
+        { message: "Document ID is required." },
+        { status: 400 },
+      );
     }
 
     const document = await prisma.document.findUnique({
       where: { slug: id },
-      select: {
-        objectKey: true,
-        fileName: true,
-        embeddingsGenerated: true,
-      },
+      select: { objectKey: true, embeddingsGenerated: true },
     });
 
     if (!document) {
-      console.log("Document not found for ID:", id);
       return NextResponse.json(
         { message: "Document not found." },
         { status: 404 },
@@ -48,102 +36,28 @@ export async function POST(req: Request) {
 
     const pdfBuffer = await getFileFromS3(document.objectKey);
 
-    const { pagesData, totalPages, tokenCount, rawExtractedText } =
-      await extractTextFromPDF(pdfBuffer);
-
-    console.log(
-      "Extracting text from PDF...",
-      pagesData,
-      "Total pages:",
-      totalPages,
-      "Token count:",
-      tokenCount,
-    );
-
-    await prisma.document.update({
-      where: { slug: id },
-      data: { extractedText: rawExtractedText },
+    const agent = new MainAgent({ name: "DocumentProcessor" });
+    const result = await agent.execute({
+      action: "process_document",
+      documentId: id,
+      pdfBuffer: pdfBuffer,
     });
 
-    let allFinalChunks = [];
-    let globalChunkIndexCounter = 0;
-
-    if (tokenCount > Number(MAX_TOKEN_THRESHOLD)) {
-      console.log(
-        `Token count (${tokenCount}) exceeds threshold (${MAX_TOKEN_THRESHOLD}). Chunking document.`,
+    if (result.status === "error") {
+      console.error("Document processing agent error:", result.error);
+      return NextResponse.json(
+        { message: "Document processing failed.", error: result.error },
+        { status: 500 },
       );
-
-      for (const page of pagesData) {
-        const { text: pageTextContent, pageNumber: currentPageNumber } = page;
-
-        const preChunksFromPage = await chunkText(
-          pageTextContent,
-          totalPages,
-          currentPageNumber,
-        );
-
-        for (const preChunk of preChunksFromPage) {
-          let currentChunkContext = "";
-          if (allFinalChunks.length > 0) {
-            const previousGlobalChunk =
-              allFinalChunks[allFinalChunks.length - 1];
-            const prevSentences =
-              (nlp(previousGlobalChunk.text)
-                .sentences()
-                .out("array") as string[]) || [];
-            if (prevSentences.length > 0) {
-              currentChunkContext =
-                prevSentences[prevSentences.length - 1].trim();
-            }
-          }
-
-          const finalChunk = {
-            id: `chunk-${globalChunkIndexCounter}`,
-            text: preChunk.text,
-            metadata: {
-              totalPages: preChunk.metadata.totalPages,
-              pageNumber: preChunk.metadata.pageNumber,
-              chunkIndex: `${globalChunkIndexCounter}`,
-              context: currentChunkContext,
-            },
-          };
-          allFinalChunks.push(finalChunk);
-          globalChunkIndexCounter++;
-        }
-      }
-
-      console.log("Total finalized chunks generated:", allFinalChunks.length);
-
-      if (allFinalChunks.length > 0) {
-        const embeddedChunks = await embedChunks(allFinalChunks);
-        await upsertData(embeddedChunks, id);
-
-        await prisma.document.update({
-          where: { slug: id },
-          data: { embeddingsGenerated: true },
-        });
-        console.log("Document chunked, embedded, and upserted successfully.");
-      } else {
-        console.log(
-          "No chunks were generated for this document. Skipping embedding and upsert.",
-        );
-        await prisma.document.update({
-          where: { slug: id },
-          data: { embeddingsGenerated: false },
-        });
-      }
-    } else {
-      console.log(
-        `Document token count (${tokenCount}) is within/under threshold. Skipping chunking and embedding.`,
-      );
-      await prisma.document.update({
-        where: { slug: id },
-        data: { embeddingsGenerated: false },
-      });
     }
 
+    console.log("Document processing agent finished:", result.data);
     return NextResponse.json(
-      { message: "Document processing finished." },
+      {
+        message:
+          result.data?.message || "Document processing initiated successfully.",
+        result: result.data,
+      },
       { status: 200 },
     );
   } catch (error) {
