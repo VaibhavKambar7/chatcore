@@ -26,6 +26,14 @@ export interface AgentState {
   current_node?: string;
   next_node?: string;
   needsMoreContext?: boolean;
+  llmToolUsed?: string;
+  planner_decision?: {
+    tool_name: string;
+    tool_args: Record<string, any>;
+    thought: string;
+  };
+  iteration_count?: number;
+  [key: string]: any;
 }
 
 export interface AgentAction {
@@ -38,10 +46,9 @@ export interface AgentConfig {
 }
 
 export interface Node {
-  id: string;
-  execute: (state: AgentState) => Promise<AgentState>;
+  id: NodeType | string;
+  execute: (state: AgentState) => Promise<Partial<AgentState>>;
 }
-
 export interface Edge {
   from: string;
   to: string;
@@ -54,4 +61,10 @@ export interface WorkflowGraph {
   entryPoint: string;
 }
 
-export type NodeType = "retrieval" | "decision" | "tool" | "response" | "error";
+export type NodeType =
+  | "retrieval"
+  | "planner"
+  | "decision"
+  | "tool"
+  | "response"
+  | "error";

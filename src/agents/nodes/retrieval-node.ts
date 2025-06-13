@@ -20,7 +20,7 @@ export const retrievalNode = (): Node => ({
       console.error("Retrieval node: No input query provided.");
       return {
         ...state,
-        status: "error",
+        status: "error" as const,
         error: "Retrieval node requires an input query.",
         current_node: "retrieval",
         next_node: "error",
@@ -33,7 +33,7 @@ export const retrievalNode = (): Node => ({
       );
       return {
         ...state,
-        status: "error",
+        status: "error" as const,
         error:
           "Retrieval node requires a document ID to query the vector database.",
         current_node: "retrieval",
@@ -55,6 +55,7 @@ export const retrievalNode = (): Node => ({
 
       let documents: AgentState["documents"] = [];
       let retrievalStatusMessage: string | undefined;
+      let contextForReasoning: string | undefined;
 
       if (
         retrievedContextString ===
@@ -64,6 +65,7 @@ export const retrievalNode = (): Node => ({
         retrievalStatusMessage =
           "No matching results found to construct context.";
         documents = [];
+        contextForReasoning = "";
         console.log("Retrieval Node: No matching results found.");
       } else {
         documents = [
@@ -73,9 +75,14 @@ export const retrievalNode = (): Node => ({
           },
         ];
         retrievalStatusMessage = "Context successfully retrieved.";
+        contextForReasoning = retrievedContextString;
         console.log(
           "Retrieval Node: Context retrieved. Length:",
           retrievedContextString.length,
+        );
+        console.log(
+          "Retrieval Node: Context snippet:",
+          retrievedContextString.substring(0, 200),
         );
       }
 
@@ -85,6 +92,7 @@ export const retrievalNode = (): Node => ({
         data: {
           ...state.data,
           retrievalStatusMessage: retrievalStatusMessage,
+          context: contextForReasoning,
         },
         status: "processing" as const,
         current_node: "retrieval",
@@ -97,6 +105,7 @@ export const retrievalNode = (): Node => ({
         status: returnedState.status,
         documentsLength: returnedState.documents?.length,
         retrievalStatusMessage: returnedState.data?.retrievalStatusMessage,
+        contextLength: returnedState.data?.context?.length,
         current_node: returnedState.current_node,
         next_node: returnedState.next_node,
       });
@@ -108,7 +117,7 @@ export const retrievalNode = (): Node => ({
       console.error(`Error in retrieval node: ${errorMessage}`);
       return {
         ...state,
-        status: "error",
+        status: "error" as const,
         error: `Document retrieval failed: ${errorMessage}`,
         current_node: "retrieval",
         next_node: "error",

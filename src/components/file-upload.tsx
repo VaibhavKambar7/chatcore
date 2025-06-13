@@ -75,7 +75,7 @@ export function FileUpload({ setPdfUrl }: FileUploadProps) {
       });
 
       if (!usage.data.isProUser && usage.data.pdfCount >= PDF_LIMIT) {
-        toast.warning("You have reached the limit of 2 PDFs.");
+        toast.warning("You have reached the daily limit of 2 PDFs.");
         setLoading(false);
         return;
       }

@@ -22,13 +22,14 @@ export class MainAgent extends BaseAgent {
     metadata?: Record<string, any>;
   }): Promise<AgentState> {
     let initialState: AgentState = {
-      status: "processing" as const,
+      status: "processing",
       metadata: {
         timestamp: new Date().toISOString(),
         agent: this.config.name,
         action: input.action,
         ...(input.metadata || {}),
       },
+      chat_history: input.chat_history || [],
     };
 
     switch (input.action) {
@@ -51,7 +52,6 @@ export class MainAgent extends BaseAgent {
           );
         }
         initialState.input_query = input.query;
-        initialState.chat_history = input.chat_history || [];
         initialState.metadata = {
           ...initialState.metadata,
           documentId: input.documentId,
@@ -61,6 +61,13 @@ export class MainAgent extends BaseAgent {
         throw new Error(`Unsupported agent action: ${input.action}`);
     }
 
+    console.log("MainAgent: Initial state for workflow:", {
+      status: initialState.status,
+      input_query: initialState.input_query,
+      documentId: initialState.metadata?.documentId,
+      action: initialState.metadata?.action,
+    });
+
     try {
       return await this.workflow.execute(initialState);
     } catch (error) {
@@ -69,6 +76,7 @@ export class MainAgent extends BaseAgent {
         ...initialState,
         status: "error",
         error: error instanceof Error ? error.message : String(error),
+        current_node: initialState.current_node || "main_agent_error",
       };
     }
   }

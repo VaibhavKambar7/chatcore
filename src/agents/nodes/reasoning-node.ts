@@ -1,4 +1,4 @@
-import { Node, AgentState } from "../types";
+import { Node, AgentState } from "../../agents/types";
 import { toolManager } from "../../tools/tool-manager";
 import prisma from "@/lib/prisma";
 import { ChatHistory } from "@/service/llmService";
@@ -6,15 +6,14 @@ import { ChatHistory } from "@/service/llmService";
 export const reasoningNode = (): Node => ({
   id: "reasoning",
   execute: async (state: AgentState): Promise<AgentState> => {
-    console.log("--- Executing Reasoning Node ---");
+    console.log("--- Executing Reasoning Node (Response Generation) ---");
     console.log("Reasoning Node: State received:", {
       input_query: state.input_query,
       documentId: state.metadata?.documentId,
       status: state.status,
-      current_node: state.current_node,
-      next_node: state.next_node,
-      documentsLength: state.documents?.length,
-      retrievalStatusMessage: state.data?.retrievalStatusMessage,
+      plannerDecision: state.metadata?.planner_decision,
+      contextAvailable: !!state.data?.context,
+      fullDocumentTextAvailable: !!state.data?.fullDocumentText,
       onChunkCallbackPresent: !!state.metadata?.onChunkCallback,
     });
 
@@ -23,53 +22,24 @@ export const reasoningNode = (): Node => ({
       const history = state.chat_history || [];
       const documentId = state.metadata?.documentId;
       const onChunkCallback = state.metadata?.onChunkCallback;
+      const plannerDecision = state.metadata?.planner_decision;
+      const context = state.data?.context;
+      const fullDocumentText = state.data?.fullDocumentText;
 
-      if (!query)
-        console.error("Reasoning Node: 'query' is missing or undefined.");
-      if (!documentId)
-        console.error("Reasoning Node: 'documentId' is missing or undefined.");
-      if (!onChunkCallback)
+      if (!query || !documentId || !onChunkCallback || !plannerDecision) {
         console.error(
-          "Reasoning Node: 'onChunkCallback' is missing or undefined.",
-        );
-
-      if (!query || !documentId || !onChunkCallback) {
-        console.error(
-          "Reasoning node: Missing essential parameters (query, documentId, or onChunkCallback).",
+          "Reasoning Node: Missing essential parameters (query, documentId, onChunkCallback, or plannerDecision).",
         );
         return {
           ...state,
-          status: "error",
+          status: "error" as const,
           error:
-            "Reasoning node requires an input query, documentId, and a streaming callback.",
+            "Reasoning node requires an input query, documentId, streaming callback, and a planner decision.",
           current_node: "reasoning",
           next_node: "error",
         };
       }
 
-      const document = await prisma.document.findUnique({
-        where: { slug: documentId },
-        select: {
-          extractedText: true,
-          embeddingsGenerated: true,
-          chatHistory: true,
-        },
-      });
-
-      if (!document) {
-        console.error(
-          `Reasoning node: Document with ID ${documentId} not found in DB.`,
-        );
-        return {
-          ...state,
-          status: "error",
-          error: `Document with ID ${documentId} not found.`,
-          current_node: "reasoning",
-          next_node: "error",
-        };
-      }
-
-      const fullDocumentText = document.extractedText ?? "";
       let llmToolUsed = "";
       let collectedResponse = "";
 
@@ -78,67 +48,24 @@ export const reasoningNode = (): Node => ({
         onChunkCallback(chunk);
       };
 
-      console.log(
-        `Reasoning Node: Document embeddingsGenerated: ${document.embeddingsGenerated}`,
-      );
-
-      if (document.embeddingsGenerated) {
-        const documentsFromRetrieval = state.documents;
-        const retrievalStatusMessage = state.data?.retrievalStatusMessage;
-
+      if (context && context.trim().length > 0) {
         console.log(
-          `Reasoning Node: Documents from retrieval: ${documentsFromRetrieval?.length}, Retrieval Status: ${retrievalStatusMessage}`,
+          "Reasoning Node: Generating contextual response based on retrieved context.",
         );
-
-        if (
-          documentsFromRetrieval &&
-          documentsFromRetrieval.length > 0 &&
-          !(
-            retrievalStatusMessage &&
-            retrievalStatusMessage.includes("No matching results")
-          )
-        ) {
-          console.log(
-            "Reasoning node: Context found from retrieval. Initiating contextual response stream.",
-          );
-          const context = documentsFromRetrieval
-            .map((doc) => doc.content)
-            .join("\n\n---\n\n");
-          console.log(
-            "Reasoning Node: Context passed to LLM (first 200 chars):",
-            context.substring(0, 200),
-          );
-
-          await toolManager.getTool("generateContextualResponse").execute({
-            query: query,
-            context: context,
-            history: history,
-            onChunk: collectorOnChunk,
-          });
-          llmToolUsed = "generateContextualResponse";
-        } else {
-          console.log(
-            "Reasoning node: Retrieval found no relevant context (or message indicated it). Falling back to pure response stream.",
-          );
-          console.log(
-            "Reasoning Node: Using full document text for pure response. Length:",
-            fullDocumentText.length,
-          );
-          await toolManager.getTool("generatePureResponse").execute({
-            query: query,
-            text: fullDocumentText,
-            history: history,
-            onChunk: collectorOnChunk,
-          });
-          llmToolUsed = "generatePureResponse (fallback from retrieval)";
-        }
-      } else {
+        await toolManager.getTool("generateContextualResponse").execute({
+          query: query,
+          context: context,
+          history: history,
+          onChunk: collectorOnChunk,
+        });
+        llmToolUsed = "generateContextualResponse";
+      } else if (
+        plannerDecision.action.name === "generate_response_pure_text" &&
+        fullDocumentText &&
+        fullDocumentText.trim().length > 0
+      ) {
         console.log(
-          "Reasoning node: Embeddings not generated for document. Initiating pure response stream based on full text.",
-        );
-        console.log(
-          "Reasoning Node: Using full document text for pure response. Length:",
-          fullDocumentText.length,
+          "Reasoning Node: Generating pure text response as planned and full text available.",
         );
         await toolManager.getTool("generatePureResponse").execute({
           query: query,
@@ -146,17 +73,36 @@ export const reasoningNode = (): Node => ({
           history: history,
           onChunk: collectorOnChunk,
         });
-        llmToolUsed = "generatePureResponse (no embeddings)";
+        llmToolUsed = "generatePureResponse";
+      } else if (
+        plannerDecision.action.name === "generate_response_pure_text" &&
+        (!fullDocumentText || fullDocumentText.trim().length === 0)
+      ) {
+        console.warn(
+          "Reasoning Node: Planner requested pure text, but full document text is not available. Generating a general response.",
+        );
+        await toolManager.getTool("generatePureResponse").execute({
+          query: query,
+          text: "No document text available to answer this question from the document.",
+          history: history,
+          onChunk: collectorOnChunk,
+        });
+        llmToolUsed = "generatePureResponse (fallback: no full text)";
+      } else {
+        console.warn(
+          `Reasoning Node: Cannot generate response. No context, and planner action (${plannerDecision.action.name}) ` +
+            `is not 'generate_response_pure_text' or full text not available.`,
+        );
+        collectedResponse =
+          "I couldn't find enough information to answer your query from the document. Please try a different question or check the document content.";
+        llmToolUsed = "no_tool_used_fallback";
       }
 
       console.log(
         `Reasoning node has completed initiating stream using: ${llmToolUsed}`,
       );
 
-      const finalCollectedResponse =
-        typeof collectedResponse === "string"
-          ? collectedResponse
-          : String(collectedResponse);
+      const finalCollectedResponse = collectedResponse;
       console.log(
         "Reasoning Node: Collected LLM response length:",
         finalCollectedResponse.length,
@@ -166,8 +112,14 @@ export const reasoningNode = (): Node => ({
         finalCollectedResponse.substring(0, 200),
       );
 
-      const chatHistoryToUpdate: ChatHistory = (document?.chatHistory ||
-        []) as ChatHistory;
+      const chatHistoryToUpdate: ChatHistory =
+        ((
+          await prisma.document.findUnique({
+            where: { slug: documentId },
+            select: { chatHistory: true },
+          })
+        )?.chatHistory as ChatHistory) || [];
+
       const updatedHistory = [
         ...chatHistoryToUpdate,
         { role: "user", content: query },
@@ -213,7 +165,7 @@ export const reasoningNode = (): Node => ({
       console.error(`Error in Reasoning Node: ${errorMessage}`);
       return {
         ...state,
-        status: "error",
+        status: "error" as const,
         error: `Failed to generate LLM response: ${errorMessage}`,
         current_node: "reasoning",
         next_node: "error",

@@ -1,8 +1,7 @@
+import { MAX_TOKEN_THRESHOLD } from "@/app/utils/constants";
 import { Node, AgentState } from "../../agents/types";
 import { toolManager } from "../../tools/tool-manager";
 import nlp from "compromise";
-
-const MAX_TOKEN_THRESHOLD = 100000;
 
 export const documentProcessingNode = (): Node => ({
   id: "document_processing",
@@ -50,7 +49,7 @@ export const documentProcessingNode = (): Node => ({
       let allFinalChunks: any[] = [];
       let didGenerateEmbeddings = false;
 
-      if (tokenCount < MAX_TOKEN_THRESHOLD) {
+      if (tokenCount > MAX_TOKEN_THRESHOLD) {
         console.log(
           `Document ${documentId} token count (${tokenCount}) exceeds threshold (${MAX_TOKEN_THRESHOLD}). Proceeding with chunking and embedding.`,
         );

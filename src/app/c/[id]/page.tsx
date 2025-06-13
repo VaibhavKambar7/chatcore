@@ -247,7 +247,7 @@ const Chat = () => {
       });
 
       if (!usage.data.isProUser && usage.data.messageCount >= MESSAGE_LIMIT) {
-        toast.warning("You have reached the limit of 20 messages.");
+        toast.warning("You have reached the daily limit of 20 messages.");
         setMessages((prev) => prev.filter((msg) => msg !== userMessage));
         setIsResponding(false);
         return;
