@@ -27,6 +27,7 @@ export interface AgentState {
   next_node?: string;
   needsMoreContext?: boolean;
   llmToolUsed?: string;
+  useWebSearch: boolean;
   planner_decision?: {
     tool_name: string;
     tool_args: Record<string, any>;

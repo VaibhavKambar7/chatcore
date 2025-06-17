@@ -41,6 +41,7 @@ export async function POST(req: Request) {
       action: "process_document",
       documentId: id,
       pdfBuffer: pdfBuffer,
+      useWebSearch: false,
     });
 
     if (result.status === "error") {

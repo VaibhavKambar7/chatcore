@@ -52,6 +52,10 @@ export const reasoningNode = (): Node => ({
         console.log(
           "Reasoning Node: Generating contextual response based on retrieved context.",
         );
+        console.log(
+          "Reasoning Node: Context snippet :- ",
+          JSON.stringify(context, null, 2),
+        );
         await toolManager.getTool("generateContextualResponse").execute({
           query: query,
           context: context,

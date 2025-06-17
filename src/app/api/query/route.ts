@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 
 export async function POST(req: Request) {
   try {
-    const { query, documentId } = await req.json();
+    const { query, documentId, useWebSearch } = await req.json();
 
     if (!query || !documentId) {
       return NextResponse.json(
@@ -43,6 +43,7 @@ export async function POST(req: Request) {
             chat_history: existingChatHistory,
             documentId: documentId,
             metadata: { onChunkCallback: onChunkCallback },
+            useWebSearch: useWebSearch,
           });
 
           if (result.status === "error") {

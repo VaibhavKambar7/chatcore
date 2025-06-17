@@ -20,6 +20,7 @@ export class MainAgent extends BaseAgent {
     documentId?: string;
     pdfBuffer?: Buffer;
     metadata?: Record<string, any>;
+    useWebSearch: boolean;
   }): Promise<AgentState> {
     let initialState: AgentState = {
       status: "processing",
@@ -30,6 +31,7 @@ export class MainAgent extends BaseAgent {
         ...(input.metadata || {}),
       },
       chat_history: input.chat_history || [],
+      useWebSearch: input.useWebSearch,
     };
 
     switch (input.action) {
@@ -56,6 +58,7 @@ export class MainAgent extends BaseAgent {
           ...initialState.metadata,
           documentId: input.documentId,
         };
+        initialState.useWebSearch = input.useWebSearch;
         break;
       default:
         throw new Error(`Unsupported agent action: ${input.action}`);
@@ -66,6 +69,7 @@ export class MainAgent extends BaseAgent {
       input_query: initialState.input_query,
       documentId: initialState.metadata?.documentId,
       action: initialState.metadata?.action,
+      useWebSearch: initialState.useWebSearch,
     });
 
     try {

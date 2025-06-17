@@ -12,6 +12,7 @@ import {
   createQueryVectorDBTool,
   createGenerateContextualResponseTool,
   createGeneratePureResponseTool,
+  createWebSearchTool,
 } from "./query-tools";
 
 export class ToolManagerImpl implements ToolManager {
@@ -30,6 +31,7 @@ export class ToolManagerImpl implements ToolManager {
     this.registerTool(createUpdateDocumentStatusTool());
 
     this.registerTool(createQueryVectorDBTool());
+    this.registerTool(createWebSearchTool());
     this.registerTool(createGenerateContextualResponseTool());
     this.registerTool(createGeneratePureResponseTool());
   }

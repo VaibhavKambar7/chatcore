@@ -6,6 +6,7 @@ import { responseNode } from "./nodes/response-node";
 import { retrievalNode } from "./nodes/retrieval-node";
 import prisma from "@/lib/prisma";
 import { AgentState, WorkflowGraph, Node, NodeType } from "./types";
+import { MAX_LOOP_ITERATIONS } from "@/app/utils/constants";
 
 type GraphNodeKey =
   | "document_processing"
@@ -120,7 +121,6 @@ export class Workflow {
     }
 
     let loopCount = 0;
-    const MAX_LOOP_ITERATIONS = 10;
 
     while (
       currentNodeId &&

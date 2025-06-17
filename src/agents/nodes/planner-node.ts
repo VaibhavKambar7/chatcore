@@ -15,6 +15,7 @@ export const plannerNode = (): Node => ({
       retrievalStatusMessage: state.data?.retrievalStatusMessage,
       chat_history_length: state.chat_history?.length,
       fullDocumentTextAvailable: !!state.data?.fullDocumentText,
+      useWebSearch: state.useWebSearch,
     });
 
     const query = state.input_query;
@@ -23,6 +24,7 @@ export const plannerNode = (): Node => ({
     const embeddingsGenerated = state.metadata?.embeddingsGenerated;
     const retrievalStatus = state.data?.retrievalStatusMessage;
     const fullDocumentText = state.data?.fullDocumentText;
+    const useWebSearch = state.useWebSearch;
 
     if (!query || !documentId) {
       console.error("Planner Node: Missing query or documentId.");
@@ -54,6 +56,7 @@ export const plannerNode = (): Node => ({
         full_document_text_available: fullDocumentText ? "Yes" : "No",
         chat_history: truncatedChatHistory,
         document_id: documentId,
+        use_web_search: useWebSearch ? "Yes" : "No",
       });
 
       console.log("Planner Node: LLM Raw result object:", plannerResult);

@@ -1,5 +1,8 @@
-import React, { useEffect, useRef, Fragment, JSX } from "react";
+"use client";
+
+import React, { useEffect, useRef, Fragment, JSX, useState } from "react";
 import ReactMarkdown, { Components } from "react-markdown";
+import { CiGlobe } from "react-icons/ci";
 import CopyButton from "./copy-button";
 
 interface Message {
@@ -14,11 +17,12 @@ interface ChatInterfaceProps {
   isResponding: boolean;
   isProcessing: boolean;
   onQueryChange: (query: string) => void;
-  onSend: (query: string) => void;
+  onSend: (query: string, useWebSearch: boolean) => void;
   questions: string[];
   showQuestions: boolean;
   setShowQuestions: React.Dispatch<React.SetStateAction<boolean>>;
   onNavigateToPage?: (pageNumber: number) => void;
+  slug: string;
 }
 
 export function ChatInterface({
@@ -32,8 +36,22 @@ export function ChatInterface({
   showQuestions,
   setShowQuestions,
   onNavigateToPage,
+  slug,
 }: ChatInterfaceProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const getStorageKey = (slug: string) => `webSearch_${slug}`;
+
+  const [useWebSearch, setUseWebSearch] = React.useState<boolean>(() => {
+    const stored = localStorage.getItem(getStorageKey(slug));
+    return stored ? JSON.parse(stored) : false;
+  });
+
+  const handleWebSearchToggle = () => {
+    const newValue = !useWebSearch;
+    setUseWebSearch(newValue);
+    localStorage.setItem(getStorageKey(slug), JSON.stringify(newValue));
+  };
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -45,7 +63,19 @@ export function ChatInterface({
     if (isResponding || isProcessing) return;
     onQueryChange(question);
     setShowQuestions(false);
-    onSend(question);
+    onSend(question, useWebSearch);
+  };
+
+  const handleSend = () => {
+    if (!query.trim() || isResponding || isProcessing) return;
+    onSend(query, useWebSearch);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
   };
 
   const markdownComponents: Components = {
@@ -72,7 +102,7 @@ export function ChatInterface({
                     if (onNavigateToPage) onNavigateToPage(pageNum);
                   }}
                   className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-0.5 px-1.5 rounded-md text-xs mx-0.5 align-middle cursor-pointer transition-colors duration-150 border border-gray-300"
-                  title={`Go to Page ${pageNum}`}
+                  title={`Page ${pageNum}`}
                 >
                   {pageNum}
                 </button>,
@@ -119,7 +149,7 @@ export function ChatInterface({
                     if (onNavigateToPage) onNavigateToPage(pageNum);
                   }}
                   className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-0.5 px-1.5 rounded-md text-xs mx-0.5 align-middle cursor-pointer transition-colors duration-150 border border-gray-300"
-                  title={`Go to Page ${pageNum}`}
+                  title={`Page ${pageNum}`}
                 >
                   {pageNum}
                 </button>,
@@ -212,38 +242,48 @@ export function ChatInterface({
           ))}
         </div>
       </div>
-      <div
-        className={`flex border ${
-          isProcessing ? "border-gray-300" : "border-gray-400"
-        }`}
-      >
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => onQueryChange(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              onSend(query);
-            }
-          }}
+      <div className="flex border border-gray-400 bg-white">
+        <button
+          type="button"
+          onClick={handleWebSearchToggle}
           disabled={isResponding || isProcessing}
-          className="flex-grow p-4 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
-          placeholder={
-            isProcessing
-              ? "Processing your PDF..."
-              : "Ask anything about your PDF..."
-          }
-        />
-        {query && (
-          <button
-            onClick={() => onSend(query)}
+          className={`px-4 py-4 flex items-center justify-center border-r border-gray-400 transition-colors duration-200 ${
+            useWebSearch
+              ? "bg-black text-white hover:bg-gray-800"
+              : "bg-white text-gray-400 hover:bg-gray-50 hover:text-gray-600"
+          } disabled:opacity-50 disabled:cursor-not-allowed`}
+          title={useWebSearch ? "Web search enabled" : "Enable web search"}
+        >
+          <CiGlobe className="h-5 w-5" />
+        </button>
+        <div className="flex-grow flex">
+          <textarea
+            value={query}
+            onChange={(e) => {
+              e.target.style.height = "auto";
+              e.target.style.height = `${e.target.scrollHeight}px`;
+              onQueryChange(e.target.value);
+            }}
+            onKeyDown={handleKeyDown}
             disabled={isResponding || isProcessing}
-            className="px-4 py-2 bg-black text-white font-semibold disabled:bg-gray-400 cursor-pointer"
-          >
-            Send
-          </button>
-        )}
+            rows={1}
+            className="flex-grow resize-none overflow-hidden p-4 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed bg-white"
+            placeholder={
+              isProcessing
+                ? "Processing your PDF..."
+                : "Ask anything about your PDF..."
+            }
+          />
+          {query.trim() && (
+            <button
+              onClick={handleSend}
+              disabled={isResponding || isProcessing}
+              className="px-4 py-2 bg-black text-white font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-gray-800 transition-colors duration-200"
+            >
+              Send
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

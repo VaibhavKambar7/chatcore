@@ -34,6 +34,7 @@ const Chat = () => {
   const { data } = useSession();
   const ipRef = useRef<string>("");
   const isProcessingRef = useRef<boolean>(false);
+  const slug = params.id as string;
 
   useEffect(() => {
     const fetchIP = async () => {
@@ -62,8 +63,8 @@ const Chat = () => {
 
       try {
         const [documentResponse, pdfResponse] = await Promise.all([
-          axios.post("/api/getConversation", { id: params.id }),
-          axios.post("/api/getPdf", { id: params.id }),
+          axios.post("/api/getConversation", { id: slug }),
+          axios.post("/api/getPdf", { id: slug }),
         ]);
 
         const { chatHistory, embeddingsGenerated } =
@@ -102,7 +103,7 @@ const Chat = () => {
       }
     };
 
-    if (params.id) {
+    if (slug) {
       fetchChatsAndPdf();
     } else {
       setLoading(false);
@@ -111,12 +112,12 @@ const Chat = () => {
       setError("Document ID is missing.");
       toast.error("Document ID is missing from the URL.");
     }
-  }, [params.id]);
+  }, [slug]);
 
   const handlePdf = async () => {
     setError("");
     try {
-      await axios.post("/api/processDocument", { id: params.id });
+      await axios.post("/api/processDocument", { id: slug });
 
       const response = await fetch("/api/getSummaryAndQuestions", {
         method: "POST",
@@ -124,7 +125,7 @@ const Chat = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          id: params.id,
+          id: slug,
         }),
       });
 
@@ -223,7 +224,7 @@ const Chat = () => {
     }
   };
 
-  const handleSend = async (query: string) => {
+  const handleSend = async (query: string, useWebSearch: boolean) => {
     if (!query.trim() || isResponding || isProcessing) return;
     if (query.length > 4000) {
       toast.warning("Message too long. Please limit to 4000 characters.");
@@ -262,12 +263,15 @@ const Chat = () => {
         body: JSON.stringify({
           query,
           history: currentHistory,
-          documentId: params.id,
+          documentId: slug,
+          useWebSearch,
         }),
       });
 
-      if (!response.ok)
+      if (!response.ok) {
+        toast.error("Failed to get response.");
         throw new Error(`HTTP error! status: ${response.status}`);
+      }
       const reader = response.body?.getReader();
       if (!reader) throw new Error("No reader available");
 
@@ -356,6 +360,7 @@ const Chat = () => {
         showQuestions={showQuestions}
         setShowQuestions={setShowQuestions}
         onNavigateToPage={handleNavigateToPage}
+        slug={slug}
       />
     </div>
   );

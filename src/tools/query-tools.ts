@@ -5,10 +5,15 @@ import {
   generateContextualLLMResponseStream,
   generatePureLLMResponseStream,
 } from "../service/llmService";
+import { webSearch } from "@/app/utils/web-search";
 
 interface QueryVectorDBArgs {
   query: string;
   documentId: string;
+}
+
+interface WebSearchArgs {
+  query: string;
 }
 
 interface LLMToolExecuteArgs {
@@ -31,6 +36,15 @@ export const createQueryVectorDBTool = (): Tool => ({
     'Queries the vector database for relevant context based on a user query and a specific document ID. Returns a formatted string of context or a "No matching results" message.',
   execute: async (input: QueryVectorDBArgs) => {
     return queryDBService(input.query, input.documentId);
+  },
+});
+
+export const createWebSearchTool = (): Tool => ({
+  name: "webSearch",
+  description:
+    "Use this tool to search the web for recent or external information.",
+  execute: async (input: WebSearchArgs) => {
+    return webSearch(input.query);
   },
 });
 
