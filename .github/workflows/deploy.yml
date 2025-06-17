@@ -40,6 +40,7 @@ jobs:
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
           NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
         run: npm run build
 
       - name: Setup SSH
@@ -126,6 +127,7 @@ jobs:
             export NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}"
             export NEXTAUTH_URL="${{ secrets.NEXTAUTH_URL }}"
             export STRIPE_SECRET_KEY="${{ secrets.STRIPE_SECRET_KEY }}"
+            export TAVILY_API_KEY="${{ secrets.TAVILY_API_KEY }}"
             
             pm2 restart ecosystem.config.js --env production || pm2 start ecosystem.config.js --env production
             
