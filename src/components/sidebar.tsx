@@ -136,7 +136,8 @@ export default function Sidebar({
         else setLoadingMore(true);
 
         const response = await axios.post<ChatsResponse>("/api/getChats", {
-          email: EMAIL,
+          email: EMAIL ?? null,
+          ip,
           page,
           limit: 10,
         });
@@ -213,6 +214,8 @@ export default function Sidebar({
       }
       const res = await axios.post(`/api/searchChats`, {
         keyword: searchQuery.trim() || null,
+        email: EMAIL ?? null,
+        ip,
       });
       const { documents } = res.data;
       setChats(documents);

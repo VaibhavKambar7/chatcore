@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { buildUserWhere } from "@/app/utils/buildUserWhere";
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, page = 1, limit = 10 } = await req.json();
+    const { email = null, ip = null, page = 1, limit = 10 } = await req.json();
 
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
@@ -12,7 +13,7 @@ export async function POST(req: NextRequest) {
     const skip = (page - 1) * limit;
 
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: buildUserWhere(email, ip),
       select: { id: true },
     });
 
