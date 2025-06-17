@@ -21,9 +21,12 @@ const Pricing = forwardRef<HTMLElement, PricingProps>(
     useEffect(() => {
       if (session) {
         const storedPlan = localStorage.getItem("selectedPlan");
-        if (storedPlan) {
+        const upgradeFlag = localStorage.getItem("upgradeInitiated");
+
+        if (storedPlan && upgradeFlag === "true") {
           setSelectedPlan(storedPlan as "monthly" | "yearly");
           localStorage.removeItem("selectedPlan");
+          localStorage.removeItem("upgradeInitiated");
           handleUpgrade();
         }
       }
@@ -35,6 +38,7 @@ const Pricing = forwardRef<HTMLElement, PricingProps>(
 
         if (!session) {
           localStorage.setItem("selectedPlan", selectedPlan);
+          localStorage.setItem("upgradeInitiated", "true");
           await signIn("google", {
             callbackUrl: `/?plan=${selectedPlan}#pricing`,
             redirect: true,
