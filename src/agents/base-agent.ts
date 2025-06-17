@@ -9,6 +9,7 @@ export abstract class BaseAgent {
     this.config = config;
     this.state = {
       status: "idle",
+      useWebSearch: false,
     };
   }
 
