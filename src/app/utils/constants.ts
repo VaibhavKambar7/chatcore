@@ -6,6 +6,7 @@ const MESSAGE_LIMIT = 20;
 const STORAGE_KEY = "chatcore_chat_data";
 const MAX_LOOP_ITERATIONS = 10;
 const TAVILY_API_URL = "https://api.tavily.com/search";
+const SECTION_REGEX = /(?:^|\n)(#{1,6}|[A-Z][^\n:]{3,100})(?=\n|:)/g;
 
 export {
   MAX_TOKEN_THRESHOLD,
@@ -16,4 +17,5 @@ export {
   STORAGE_KEY,
   MAX_LOOP_ITERATIONS,
   TAVILY_API_URL,
+  SECTION_REGEX,
 };

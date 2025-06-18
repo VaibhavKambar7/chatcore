@@ -154,6 +154,7 @@ const summaryPrompt = ChatPromptTemplate.fromMessages([
     `You are an AI assistant that helps summarize documents.
     Please provide a comprehensive summary of the following document.
     Focus on the main points, key concepts, and important details.
+    Keep the entire summary concise—**no more than 250 words**. Prefer short paragraphs or bullet points over long prose.
     Do not include questions or any other content - just the summary.
 
     Guidelines for your responses:

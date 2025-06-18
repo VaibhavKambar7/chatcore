@@ -8,6 +8,8 @@ import {
   generateSummaryAndQuestionsPrompt,
   textOnlyPrompt,
 } from "../app/utils/prompts";
+import pLimit from "p-limit";
+import { splitBySections } from "@/app/utils/splitBySections";
 
 dotenv.config();
 
@@ -104,10 +106,35 @@ export const generateSummaryOnly = async (
   onChunk: (chunk: string) => void,
 ): Promise<string> => {
   try {
-    let fullSummary = "";
-    let tokenCount = 0;
+    const chunks = splitBySections(text);
+    if (chunks.length === 0) {
+      chunks.push(text.slice(0, 15000));
+    }
+    console.log("Chunks generated:", chunks);
 
-    const model = new ChatGoogleGenerativeAI({
+    const modelNonStreaming = new ChatGoogleGenerativeAI({
+      modelName: "gemini-2.0-flash-exp",
+      temperature: 0.7,
+      apiKey: process.env.GEMINI_API_KEY,
+      streaming: false,
+    });
+
+    const nonStreamChain = summaryPrompt.pipe(modelNonStreaming);
+
+    const limit = pLimit(5);
+    const intermediateSummaries = await Promise.all(
+      chunks.map((chunk) =>
+        limit(() =>
+          nonStreamChain
+            .invoke({ text: chunk })
+            .then((res) => res.content as string),
+        ),
+      ),
+    );
+
+    let finalSummary = "";
+
+    const modelStreaming = new ChatGoogleGenerativeAI({
       modelName: "gemini-2.0-flash-exp",
       temperature: 0.7,
       apiKey: process.env.GEMINI_API_KEY,
@@ -115,21 +142,19 @@ export const generateSummaryOnly = async (
       callbacks: [
         {
           handleLLMNewToken(token) {
-            tokenCount++;
-            fullSummary += token;
+            finalSummary += token;
             onChunk(token);
-            console.log(`Token ${tokenCount}: "${token}"`);
           },
         },
       ],
     });
 
-    const chain = summaryPrompt.pipe(model);
-    await chain.invoke({
-      text: text.substring(0, 15000),
+    const streamChain = summaryPrompt.pipe(modelStreaming);
+    await streamChain.invoke({
+      text: intermediateSummaries.join("\n\n"),
     });
 
-    return fullSummary;
+    return finalSummary;
   } catch (error) {
     console.error("Error generating summary:", error);
     return "Unable to generate summary for this document.";
