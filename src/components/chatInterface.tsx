@@ -174,6 +174,11 @@ export function ChatInterface({
       );
       return <li className={props.className}>{childrenWithCitations}</li>;
     },
+    a: ({ href, children }) => (
+      <a href={href} target="_blank" rel="noopener noreferrer">
+        {children}
+      </a>
+    ),
   };
 
   return (
