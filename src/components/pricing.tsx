@@ -73,133 +73,111 @@ const Pricing = forwardRef<HTMLElement, PricingProps>(
           <h3 className="mb-12 text-center text-2xl font-bold text-gray-900 md:text-3xl">
             Pricing Plans
           </h3>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <div className="relative flex flex-col justify-between border rounded-none p-6 w-full sm:w-1/3 max-w-md">
-              <div className="mt-1 text-xl font-bold text-gray-900">Free</div>
-              <ul className="space-y-3 text-black text-md mt-4">
+          <div className="flex justify-center mb-8">
+            <div className="flex items-center gap-4 bg-gray-100 p-1">
+              <button
+                onClick={() => setSelectedPlan("monthly")}
+                className={`px-4 py-2 text-sm font-medium ${
+                  selectedPlan === "monthly"
+                    ? "bg-black text-white"
+                    : "text-black"
+                } cursor-pointer`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setSelectedPlan("yearly")}
+                className={`px-4 py-2 text-sm font-medium ${
+                  selectedPlan === "yearly"
+                    ? "bg-black text-white"
+                    : "text-black"
+                } cursor-pointer`}
+              >
+                Yearly
+              </button>
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-6 justify-center">
+            <div className="relative flex flex-col justify-between border p-6 w-full sm:w-1/3 max-w-md cursor-default space-y-6">
+              <div className="text-xl font-bold text-gray-900">Free</div>
+              <ul className="space-y-3 text-black text-md">
                 {[
                   "✔ 2 PDFs/Day",
                   "✔ 20 Questions/Day",
                   "✔ 500 Pages/PDF",
                   "✔ 10 MB/PDF",
                 ].map((item, index) => (
-                  <li key={index} className="flex items-center gap-2">
-                    <span className="font-semibold">{item}</span>
+                  <li key={index} className="font-semibold">
+                    {item}
                   </li>
                 ))}
               </ul>
               <Button
-                className="w-full bg-gray-300 rounded-none text-sm h-12 cursor-not-allowed text-gray-500 mt-4"
+                className="w-full bg-gray-300 text-sm h-12 cursor-not-allowed text-gray-500 rounded-none"
                 disabled
               >
-                <div className="flex items-center gap-2">Current Plan</div>
+                Current Plan
               </Button>
             </div>
 
             <div
-              onClick={() => setSelectedPlan("monthly")}
-              className={`relative flex flex-col cursor-pointer justify-between border rounded-none p-6 w-full sm:w-1/3 max-w-md ${
-                selectedPlan === "monthly" ? "border-black" : "border-gray-300"
+              className={`relative flex flex-col justify-between border p-6 w-full sm:w-1/3 max-w-md space-y-6 cursor-pointer ${
+                selectedPlan === "monthly" || selectedPlan === "yearly"
+                  ? "border-black"
+                  : "border-gray-300"
               }`}
             >
-              <div className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  id="monthly"
-                  name="plan"
-                  checked={selectedPlan === "monthly"}
-                  onChange={() => setSelectedPlan("monthly")}
-                  className="accent-black w-4 h-4"
-                />
-                <label htmlFor="monthly" className="font-medium text-gray-900">
-                  Monthly
-                </label>
-              </div>
-              <div className="mt-1 text-xl font-bold text-gray-900">
-                ₹499{" "}
-                <span className="text-xs font-normal text-gray-500">/mo</span>
-              </div>
-              <ul className="space-y-3 text-black text-md mt-4">
-                {[
-                  "✔ Unlimited PDFs",
-                  "✔ Unlimited Questions",
-                  "✔ 2,000 Pages/PDF",
-                  "✔ 32 MB/PDF",
-                ].map((item, index) => (
-                  <li key={index} className="flex items-center gap-2">
-                    <span className="font-semibold">{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <Button
-                onClick={handleUpgrade}
-                className={`w-full rounded-none text-sm h-12 cursor-pointer text-white mt-4 ${
-                  selectedPlan === "monthly"
-                    ? "bg-black hover:bg-gray-800"
-                    : "bg-gray-400 cursor-not-allowed"
-                }`}
-                disabled={selectedPlan !== "monthly"}
-              >
-                {loading ? (
-                  <PiSpinnerBold className="animate-spin text-4xl" />
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <IoSparkles />
-                    Upgrade to Plus
+              <div className="flex items-center justify-between">
+                <div className="text-xl font-bold text-gray-900">
+                  {selectedPlan === "monthly" ? (
+                    <>
+                      ₹499{" "}
+                      <span className="text-xs font-normal text-gray-500">
+                        /mo
+                      </span>
+                    </>
+                  ) : (
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl font-bold text-gray-900">
+                          ₹2399
+                        </span>
+                        <span className="text-xs font-normal text-gray-500">
+                          /yr
+                        </span>
+                      </div>
+                      <div className="text-sm text-gray-500">(₹199/mo)</div>
+                    </div>
+                  )}
+                </div>
+                {selectedPlan === "yearly" && (
+                  <div className="text-xs font-semibold bg-black text-white px-2 py-1">
+                    Save 60%
                   </div>
                 )}
-              </Button>
-            </div>
-
-            <div
-              onClick={() => setSelectedPlan("yearly")}
-              className={`relative flex flex-col cursor-pointer justify-between border rounded-none p-6 w-full sm:w-1/3 max-w-md ${
-                selectedPlan === "yearly" ? "border-black" : "border-gray-300"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  id="yearly"
-                  name="plan"
-                  checked={selectedPlan === "yearly"}
-                  onChange={() => setSelectedPlan("yearly")}
-                  className="accent-black w-4 h-4"
-                />
-                <label htmlFor="yearly" className="font-medium text-gray-900">
-                  Yearly
-                </label>
-                <span className="ml-2 bg-black text-white text-[10px] font-semibold px-1.5 py-0.5">
-                  SAVE 60%
-                </span>
               </div>
-              <div className="mt-2">
-                <div className="flex items-center gap-2">
-                  <div className="text-xl font-bold text-gray-900">₹2399</div>
-                  <span className="text-xs font-normal text-gray-500">/yr</span>
-                </div>
-                <div className="text-sm text-gray-500">(₹199.92/mo)</div>
-              </div>
-              <ul className="space-y-3 text-black text-md mt-4">
+              <ul className="space-y-3 text-black text-md">
                 {[
                   "✔ Unlimited PDFs",
                   "✔ Unlimited Questions",
                   "✔ 2,000 Pages/PDF",
                   "✔ 32 MB/PDF",
                 ].map((item, index) => (
-                  <li key={index} className="flex items-center gap-2">
-                    <span className="font-semibold">{item}</span>
+                  <li key={index} className="font-semibold">
+                    {item}
                   </li>
                 ))}
               </ul>
               <Button
                 onClick={handleUpgrade}
-                className={`w-full rounded-none text-sm h-12 cursor-pointer text-white mt-4 ${
-                  selectedPlan === "yearly"
-                    ? "bg-black hover:bg-gray-800"
+                className={`w-full text-sm h-12 text-white rounded-none ${
+                  selectedPlan === "monthly" || selectedPlan === "yearly"
+                    ? "bg-black hover:bg-gray-800 cursor-pointer"
                     : "bg-gray-400 cursor-not-allowed"
                 }`}
-                disabled={selectedPlan !== "yearly"}
+                disabled={
+                  selectedPlan !== "monthly" && selectedPlan !== "yearly"
+                }
               >
                 {loading ? (
                   <PiSpinnerBold className="animate-spin text-4xl" />

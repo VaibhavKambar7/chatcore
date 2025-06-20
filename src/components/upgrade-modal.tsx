@@ -177,7 +177,7 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
                         /yr
                       </span>
                     </div>
-                    <div className="text-sm text-gray-500">(₹199.92/mo)</div>
+                    <div className="text-sm text-gray-500">(₹199/mo)</div>
                   </div>
                 </div>
               </div>
