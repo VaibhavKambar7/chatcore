@@ -314,7 +314,7 @@ export default function Sidebar({
                             <button
                               onClick={handleLoadMore}
                               disabled={loadingMore}
-                              className="flex items-center justify-center w-full p-2 text-gray-600 hover:bg-black transition-colors"
+                              className="flex items-center mb-3 justify-center w-full p-2 text-gray-600 hover:bg-gray-200 hover:cursor-pointer transition-colors"
                             >
                               {loadingMore ? (
                                 <PiSpinnerBold className="animate-spin text-xl" />
