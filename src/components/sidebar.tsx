@@ -165,13 +165,13 @@ export default function Sidebar({
 
   useEffect(() => {
     const init = async () => {
-      try {
-        await fetchChats(1, []);
-      } catch (err) {
-        const hasCachedData = loadCachedChats();
-        if (!hasCachedData) setChats([]);
-      } finally {
-        setLoading(false);
+      const hasCachedData = loadCachedChats();
+      if (EMAIL) {
+        try {
+          await fetchChats(1, hasCachedData ? chats : []);
+        } catch (err) {
+          if (!hasCachedData) setChats([]);
+        }
       }
     };
 

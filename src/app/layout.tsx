@@ -19,8 +19,8 @@ const caveat = Caveat({
 });
 
 export const metadata: Metadata = {
-  title: "Chatcore - Chat with your pdf",
-  description: "Chat with your pdf",
+  title: "Chatcore - Chat with any pdf",
+  description: "Chat with any pdf",
 };
 
 export default function RootLayout({
