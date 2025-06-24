@@ -40,6 +40,10 @@ jobs:
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
           NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          STRIPE_MONTHLY_PRICE_ID: ${{ secrets.STRIPE_MONTHLY_PRICE_ID }}
+          STRIPE_YEARLY_PRICE_ID: ${{ secrets.STRIPE_YEARLY_PRICE_ID }}
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
           TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
         run: npm run build
 
@@ -86,14 +90,8 @@ jobs:
         run: |
           ssh -i ~/.ssh/id_rsa ${{ secrets.USERNAME }}@${{ secrets.HOST }} << 'EOF'
             cd ~/app
-            
-            # Complete clean install
             rm -rf node_modules package-lock.json
-            
-            # Install dependencies
             npm install --omit=dev
-            
-            # Force install sharp for linux
             npm uninstall sharp
             npm install sharp --platform=linux --arch=x64
             
@@ -105,11 +103,7 @@ jobs:
               npm install sharp --platform=linux --arch=x64
               cd ~/app
             fi
-            
-            # Generate Prisma client
             npx prisma generate
-            
-            # Set environment variables and start PM2
             export GEMINI_API_KEY="${{ secrets.GEMINI_API_KEY }}"
             export PINECONE_API_KEY="${{ secrets.PINECONE_API_KEY }}"
             export PINECONE_ENVIRONMENT="${{ secrets.PINECONE_ENVIRONMENT }}"
@@ -127,11 +121,12 @@ jobs:
             export NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}"
             export NEXTAUTH_URL="${{ secrets.NEXTAUTH_URL }}"
             export STRIPE_SECRET_KEY="${{ secrets.STRIPE_SECRET_KEY }}"
+            export STRIPE_WEBHOOK_SECRET="${{ secrets.STRIPE_WEBHOOK_SECRET }}"
+            export STRIPE_MONTHLY_PRICE_ID="${{ secrets.STRIPE_MONTHLY_PRICE_ID }}"
+            export STRIPE_YEARLY_PRICE_ID="${{ secrets.STRIPE_YEARLY_PRICE_ID }}"
+            export NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}"
             export TAVILY_API_KEY="${{ secrets.TAVILY_API_KEY }}"
-            
             pm2 restart ecosystem.config.js --env production || pm2 start ecosystem.config.js --env production
-            
-            # Show final disk usage and PM2 status
             df -h
             pm2 status
           EOF

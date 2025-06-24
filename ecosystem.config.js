@@ -35,6 +35,11 @@ module.exports = {
         NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
         NEXTAUTH_URL: process.env.NEXTAUTH_URL,
         STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+        STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+        STRIPE_MONTHLY_PRICE_ID: process.env.STRIPE_MONTHLY_PRICE_ID,
+        STRIPE_YEARLY_PRICE_ID: process.env.STRIPE_YEARLY_PRICE_ID,
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:
+          process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
         TAVILY_API_KEY: process.env.TAVILY_API_KEY,
       },
     },
