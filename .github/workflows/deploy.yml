@@ -59,17 +59,20 @@ jobs:
           ssh -i ~/.ssh/id_rsa ${{ secrets.USERNAME }}@${{ secrets.HOST }} << 'EOF'
             # Stop PM2 processes
             pm2 stop all || true
-            
+
             # Clean up space
             sudo apt clean
             sudo apt autoremove -y
             npm cache clean --force || true
             rm -rf ~/.npm/_logs/* || true
             pm2 flush || true
-            
+
             # Remove old build
             rm -rf ~/app/.next/* || true
-            
+
+            # Ensure .next directory exists
+            mkdir -p ~/app/.next
+
             # Check disk space
             df -h
           EOF
@@ -94,7 +97,7 @@ jobs:
             npm install --omit=dev
             npm uninstall sharp
             npm install sharp --platform=linux --arch=x64
-            
+
             # Fix sharp in @xenova/transformers if it exists
             if [ -d "node_modules/@xenova/transformers" ]; then
               echo "Fixing sharp in @xenova/transformers..."
