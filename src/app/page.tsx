@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, RefObject } from "react";
 import { GoSidebarExpand } from "react-icons/go";
 import { getIP } from "@/app/utils/getIP";
 import Sidebar from "@/components/sidebar";
-import Header from "@/components/header";
 import Hero from "@/components/hero";
 import Features from "@/components/features";
 import HowItWorks from "@/components/how-it-works";
@@ -54,13 +53,13 @@ export default function Home() {
         <div
           className={`flex-1 flex flex-col ${isSidebarOpen ? "ml-[280px]" : "ml-14"}`}
         >
-          <Header
-            featuresRef={featuresRef as RefObject<HTMLElement>}
-            faqRef={faqRef as RefObject<HTMLElement>}
-            pricingRef={pricingRef as RefObject<HTMLElement>}
-          />
           <main ref={homeRef} className="flex-1">
-            <Hero setPdfUrl={(url) => setPdfUrl(url)} />
+            <Hero
+              setPdfUrl={(url) => setPdfUrl(url)}
+              featuresRef={featuresRef}
+              faqRef={faqRef}
+              pricingRef={pricingRef}
+            />
             <Features ref={featuresRef} />
             <HowItWorks />
             <FAQ ref={faqRef} />

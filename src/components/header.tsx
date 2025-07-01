@@ -16,13 +16,13 @@ const Header = forwardRef<HTMLElement, HeaderProps>(
     };
 
     return (
-      <header ref={ref} className="border-b border-gray-100">
+      <header ref={ref}>
         <div className="container mx-auto flex h-16 items-center justify-center px-4">
           <nav className="block">
             <ul className="flex space-x-8">
               <li>
                 <a
-                  className="text-sm text-gray-600 hover:text-gray-900 cursor-pointer"
+                  className="text-md text-gray-600 font-normal hover:text-gray-900 cursor-pointer"
                   onClick={() => scrollToSection(featuresRef)}
                 >
                   Features
@@ -30,7 +30,7 @@ const Header = forwardRef<HTMLElement, HeaderProps>(
               </li>
               <li>
                 <a
-                  className="text-sm text-gray-600 hover:text-gray-900 cursor-pointer"
+                  className="text-md text-gray-600 font-normal hover:text-gray-900 cursor-pointer"
                   onClick={() => scrollToSection(faqRef)}
                 >
                   FAQ
@@ -38,7 +38,7 @@ const Header = forwardRef<HTMLElement, HeaderProps>(
               </li>
               <li>
                 <a
-                  className="text-sm text-gray-600 hover:text-gray-900 cursor-pointer"
+                  className="text-md text-gray-600 font-normal hover:text-gray-900 cursor-pointer"
                   onClick={() => scrollToSection(pricingRef)}
                 >
                   Pricing
